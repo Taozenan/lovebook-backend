@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: tzn-auth
+  profiles:
+    active: local
+  config:
+    import: optional:file:./config/application-local.yml,optional:nacos:${spring.application.name}.yml?group=DEFAULT_GROUP
+  datasource:
+    url: jdbc:mysql://10.1.23.40:3306/fkf?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos123}
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+
+server:
+  port: 8081
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET}
+    expires: 86400
+  bootstrap:
+    admin-password: ${INITIAL_ADMIN_PASSWORD}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

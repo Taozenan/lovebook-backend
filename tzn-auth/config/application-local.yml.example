@@ -1,0 +1,17 @@
+# 复制为同目录 application-local.yml 后填写实际值；该文件已被 Git 忽略。
+spring:
+  datasource:
+    username: your_database_username
+    password: your_database_password
+  cloud:
+    nacos:
+      username: nacos
+      password: your_nacos_password
+
+auth:
+  jwt:
+    # 使用至少 32 字节的 Base64 随机密钥，生产环境不要复用。
+    secret: replace_with_a_random_base64_secret
+  bootstrap:
+    # 仅在 admin 尚不存在时用于创建管理员；创建后不会覆盖已有密码。
+    admin-password: replace_with_initial_admin_password
