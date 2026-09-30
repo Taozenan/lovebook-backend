@@ -1,84 +1,107 @@
 package com.tzn.auth.service.impl;
 
-import com.tzn.auth.dto.LoginRequest;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tzn.auth.dto.AvatarUpdateRequest;
+import com.tzn.auth.dto.LoginRequest;
 import com.tzn.auth.service.AuthService;
+import com.tzn.common.entity.SysRole;
+import com.tzn.common.entity.SysUser;
+import com.tzn.common.entity.SysUserRole;
+import com.tzn.common.mapper.SysRoleMapper;
+import com.tzn.common.mapper.SysUserMapper;
+import com.tzn.common.mapper.SysUserRoleMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
-
-    private final JdbcTemplate jdbcTemplate;
+    private final SysUserMapper userMapper;
+    private final SysRoleMapper roleMapper;
+    private final SysUserRoleMapper userRoleMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final SecretKey signingKey;
     private final long expiresSeconds;
 
-    public AuthServiceImpl(JdbcTemplate jdbcTemplate,
+    public AuthServiceImpl(SysUserMapper userMapper, SysRoleMapper roleMapper, SysUserRoleMapper userRoleMapper,
                            @Value("${auth.jwt.secret}") String jwtSecret,
                            @Value("${auth.jwt.expires}") long expiresSeconds) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.userMapper = userMapper;
+        this.roleMapper = roleMapper;
+        this.userRoleMapper = userRoleMapper;
         this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
         this.expiresSeconds = expiresSeconds;
     }
 
     @Override
     public Map<String, Object> login(LoginRequest request) {
-        List<Map<String, Object>> users = jdbcTemplate.queryForList(
-                "SELECT id, username, nickname, avatar_url AS avatarUrl, password, enabled FROM sys_user WHERE username = ?", request.username());
-        if (users.isEmpty() || !passwordEncoder.matches(request.password(), String.valueOf(users.get(0).get("password")))) {
+        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.username()));
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new IllegalArgumentException("账号或密码错误");
         }
-        Map<String, Object> user = users.get(0);
-        if (!isEnabled(user.get("enabled"))) {
+        if (!Integer.valueOf(1).equals(user.getEnabled())) {
             throw new IllegalArgumentException("账号已被禁用");
         }
-        List<String> roles = jdbcTemplate.queryForList(
-                "SELECT r.role_code FROM sys_role r INNER JOIN sys_user_role ur ON ur.role_id = r.id WHERE ur.user_id = ?",
-                String.class, user.get("id"));
+        List<Long> roleIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, user.getId()))
+                .stream().map(SysUserRole::getRoleId).toList();
+        List<String> roles = roleIds.isEmpty() ? List.of() : roleMapper.selectBatchIds(roleIds).stream().map(SysRole::getRoleCode).toList();
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("token", createToken(String.valueOf(user.get("username")), roles));
-        result.put("username", user.get("username"));
-        result.put("nickname", user.get("nickname"));
-        result.put("avatarUrl", user.get("avatarUrl"));
+        result.put("token", createToken(user.getUsername(), roles));
+        result.put("username", user.getUsername());
+        result.put("nickname", user.getNickname());
+        result.put("avatarUrl", user.getAvatarUrl());
         result.put("roles", roles);
         result.put("expiresIn", expiresSeconds);
         return result;
     }
 
     @Override
+    @Transactional
     public void register(String phone, String nickname, String password) {
         String username = phone.trim();
-        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM sys_user WHERE username = ?", Integer.class, username);
-        if (count != null && count > 0) {
+        if (userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username)) > 0) {
             throw new IllegalArgumentException("该手机号已注册");
         }
-        jdbcTemplate.update("INSERT INTO sys_user (username, nickname, password, enabled) VALUES (?, ?, ?, ?)",
-                username, nickname.trim(), passwordEncoder.encode(password), true);
-        Long userId = jdbcTemplate.queryForObject("SELECT id FROM sys_user WHERE username = ?", Long.class, username);
-        Long roleId = jdbcTemplate.queryForObject("SELECT id FROM sys_role WHERE role_code = 'USER'", Long.class);
-        jdbcTemplate.update("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", userId, roleId);
+        SysUser user = new SysUser();
+        user.setUsername(username);
+        user.setNickname(nickname.trim());
+        user.setPassword(passwordEncoder.encode(password));
+        user.setEnabled(1);
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        userMapper.insert(user);
+        SysRole role = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, "USER"));
+        if (role == null) {
+            throw new IllegalArgumentException("默认用户角色不存在");
+        }
+        SysUserRole userRole = new SysUserRole();
+        userRole.setUserId(user.getId());
+        userRole.setRoleId(role.getId());
+        userRoleMapper.insert(userRole);
     }
+
     @Override
     public void updateAvatar(String authorization, AvatarUpdateRequest request) {
-        String username = currentUsername(authorization);
+        SysUser user = currentUserEntity(authorization);
         String avatarUrl = request == null || request.avatarUrl() == null ? null : request.avatarUrl().trim();
         if (avatarUrl != null && avatarUrl.length() > 500) {
             throw new IllegalArgumentException("头像地址不能超过500个字符");
         }
-        jdbcTemplate.update("UPDATE sys_user SET avatar_url = ?, update_time = NOW() WHERE username = ?", avatarUrl, username);
+        user.setAvatarUrl(avatarUrl);
+        user.setUpdateTime(LocalDateTime.now());
+        userMapper.updateById(user);
     }
 
     @Override
@@ -94,8 +117,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private boolean isEnabled(Object enabled) {
-        return enabled instanceof Number number && number.intValue() == 1 || Boolean.TRUE.equals(enabled);
+    private SysUser currentUserEntity(String authorization) {
+        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, currentUsername(authorization)));
+        if (user == null || !Integer.valueOf(1).equals(user.getEnabled())) {
+            throw new IllegalArgumentException("用户不存在或已禁用");
+        }
+        return user;
     }
 
     private String createToken(String username, List<String> roles) {
@@ -104,6 +131,3 @@ public class AuthServiceImpl implements AuthService {
                 .expiration(Date.from(now.plusSeconds(expiresSeconds))).signWith(signingKey).compact();
     }
 }
-
-
-
