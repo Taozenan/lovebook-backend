@@ -1,123 +1,42 @@
 package com.tzn.shop.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tzn.common.entity.CoupleBinding;
+import com.tzn.common.entity.ShopBanner;
+import com.tzn.common.entity.ShopCategory;
+import com.tzn.common.entity.ShopItem;
+import com.tzn.common.entity.ShopItemImage;
+import com.tzn.common.entity.ShopItemReview;
+import com.tzn.common.entity.SysUser;
+import com.tzn.common.mapper.CoupleBindingMapper;
+import com.tzn.common.mapper.ShopBannerMapper;
+import com.tzn.common.mapper.ShopCategoryMapper;
+import com.tzn.common.mapper.ShopItemImageMapper;
+import com.tzn.common.mapper.ShopItemMapper;
+import com.tzn.common.mapper.ShopItemReviewMapper;
+import com.tzn.common.mapper.SysUserMapper;
 import com.tzn.shop.enums.ShopEnabledStatus;
 import com.tzn.shop.enums.ShopItemStatus;
 import com.tzn.shop.enums.ShopItemType;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopService;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ShopServiceImpl implements ShopService {
-
-    private static final String ITEM_COLUMNS = """
-            i.id, i.item_type AS itemType, i.title, i.subtitle, i.description, i.price, i.stock,
-            i.cover_url AS coverUrl, i.service_duration_min AS serviceDurationMin,
-            u.id AS sellerId, u.username AS sellerPhone, u.nickname AS sellerName
-            """;
-
-    private final JdbcTemplate jdbcTemplate;
-    private final CurrentUserService currentUserService;
-
-    public ShopServiceImpl(JdbcTemplate jdbcTemplate, CurrentUserService currentUserService) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.currentUserService = currentUserService;
-    }
-
-    @Override
-    public Map<String, Object> home(String authorization) {
-        long partnerId = partnerId(authorization);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("banners", jdbcTemplate.queryForList("""
-                SELECT id, title, image_url AS imageUrl, link_item_id AS linkItemId
-                FROM shop_banner
-                WHERE status = ? AND del_flag = 0
-                  AND (start_time IS NULL OR start_time <= NOW())
-                  AND (end_time IS NULL OR end_time >= NOW())
-                ORDER BY sort_no DESC, id DESC
-                """, ShopEnabledStatus.ENABLED.getCode()));
-        result.put("categories", jdbcTemplate.queryForList("""
-                SELECT id, category_type AS categoryType, name, icon_url AS iconUrl
-                FROM shop_category WHERE status = ? AND del_flag = 0
-                ORDER BY sort_no ASC, id ASC
-                """, ShopEnabledStatus.ENABLED.getCode()));
-        result.put("partner", partnerProfile(partnerId));
-        result.put("recommendedFoods", queryItems(ShopItemType.FOOD, partnerId, true, 6));
-        result.put("hotServices", queryItems(ShopItemType.SERVICE, partnerId, true, 6));
-        return result;
-    }
-
-    @Override
-    public Map<String, Object> list(String authorization, Integer itemType, String keyword, Long categoryId, Boolean recommended) {
-        long sellerId = partnerId(authorization);
-        StringBuilder sql = new StringBuilder("SELECT ").append(ITEM_COLUMNS)
-                .append(" FROM shop_item i JOIN sys_user u ON u.id = i.seller_user_id")
-                .append(" WHERE i.seller_user_id = ? AND i.status = ? AND i.del_flag = 0");
-        if (itemType != null) {
-            sql.append(" AND i.item_type = ?");
-        }
-        if (keyword != null && !keyword.isBlank()) {
-            sql.append(" AND i.title LIKE ?");
-        }
-        if (categoryId != null) {
-            sql.append(" AND i.category_id = ?");
-        }
-        if (Boolean.TRUE.equals(recommended)) {
-            sql.append(" AND i.is_recommended = 1");
-        }
-        sql.append(" ORDER BY i.publish_time DESC, i.id DESC");
-        List<Object> args = new java.util.ArrayList<>();
-        args.add(sellerId); args.add(ShopItemStatus.ON_SHELF.getCode());
-        if (itemType != null) { args.add(itemType); }
-        if (keyword != null && !keyword.isBlank()) { args.add("%" + keyword.trim() + "%"); }
-        if (categoryId != null) { args.add(categoryId); }
-        List<Map<String, Object>> items = jdbcTemplate.queryForList(sql.toString(), args.toArray());
-        return Map.of("items", items);
-    }
-
-    @Override
-    public Map<String, Object> detail(long itemId) {
-        List<Map<String, Object>> items = jdbcTemplate.queryForList("SELECT " + ITEM_COLUMNS + " FROM shop_item i JOIN sys_user u ON u.id = i.seller_user_id WHERE i.id = ? AND i.status = ? AND i.del_flag = 0", itemId, ShopItemStatus.ON_SHELF.getCode());
-        if (items.isEmpty()) {
-            throw new IllegalArgumentException("商品不存在或已下架");
-        }
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("item", items.get(0));
-        result.put("images", jdbcTemplate.queryForList("SELECT id, image_url AS imageUrl, sort_no AS sortNo FROM shop_item_image WHERE item_id = ? AND del_flag = 0 ORDER BY sort_no ASC, id ASC", itemId));
-        result.put("reviews", jdbcTemplate.queryForList("SELECT r.id, r.rating, r.content, r.create_time AS createTime, u.nickname AS reviewerName, u.avatar_url AS reviewerAvatarUrl FROM shop_item_review r JOIN sys_user u ON u.id = r.reviewer_user_id WHERE r.item_id = ? AND r.del_flag = 0 ORDER BY r.create_time DESC, r.id DESC", itemId));
-        result.put("reviewSummary", jdbcTemplate.queryForMap("SELECT COALESCE(AVG(rating), 0) AS averageRating, COUNT(*) AS reviewCount FROM shop_item_review WHERE item_id = ? AND del_flag = 0", itemId));
-        return result;
-    }
-
-    private List<Map<String, Object>> queryItems(ShopItemType itemType, long sellerId, boolean recommendedOnly, int limit) {
-        String recommended = recommendedOnly ? " AND i.is_recommended = 1" : "";
-        return jdbcTemplate.queryForList("SELECT " + ITEM_COLUMNS + " FROM shop_item i JOIN sys_user u ON u.id = i.seller_user_id WHERE i.item_type = ? AND i.seller_user_id = ? AND i.status = ? AND i.del_flag = 0" + recommended + " ORDER BY i.sort_no DESC, i.id DESC LIMIT ?", itemType.getCode(), sellerId, ShopItemStatus.ON_SHELF.getCode(), limit);
-    }
-
-    private Map<String, Object> partnerProfile(long partnerId) {
-        if (partnerId < 0) {
-            return Map.of("bound", false, "nickname", "");
-        }
-        List<Map<String, Object>> users = jdbcTemplate.queryForList("SELECT nickname, username AS phone FROM sys_user WHERE id = ?", partnerId);
-        if (users.isEmpty()) {
-            return Map.of("bound", false, "nickname", "");
-        }
-        Map<String, Object> profile = new LinkedHashMap<>(users.get(0));
-        profile.put("bound", true);
-        return profile;
-    }
-
-    private long partnerId(String authorization) {
-        long currentId = currentUserService.requireUserId(authorization);
-        List<Long> partnerIds = jdbcTemplate.queryForList(
-                "SELECT CASE WHEN requester_user_id = ? THEN target_user_id ELSE requester_user_id END "
-                        + "FROM couple_binding WHERE (requester_user_id = ? OR target_user_id = ?) "
-                        + "AND status = 'ACCEPTED' LIMIT 1",
-                Long.class, currentId, currentId, currentId);
-        return partnerIds.isEmpty() ? -1L : partnerIds.get(0);
-    }
+    private final ShopItemMapper itemMapper; private final ShopItemImageMapper imageMapper; private final ShopCategoryMapper categoryMapper; private final ShopBannerMapper bannerMapper; private final ShopItemReviewMapper reviewMapper; private final SysUserMapper userMapper; private final CoupleBindingMapper bindingMapper; private final CurrentUserService currentUserService;
+    public ShopServiceImpl(ShopItemMapper itemMapper,ShopItemImageMapper imageMapper,ShopCategoryMapper categoryMapper,ShopBannerMapper bannerMapper,ShopItemReviewMapper reviewMapper,SysUserMapper userMapper,CoupleBindingMapper bindingMapper,CurrentUserService currentUserService){this.itemMapper=itemMapper;this.imageMapper=imageMapper;this.categoryMapper=categoryMapper;this.bannerMapper=bannerMapper;this.reviewMapper=reviewMapper;this.userMapper=userMapper;this.bindingMapper=bindingMapper;this.currentUserService=currentUserService;}
+    @Override public Map<String,Object> home(String authorization){long pid=partnerId(authorization);Map<String,Object> r=new LinkedHashMap<>();List<Map<String,Object>> banners=new ArrayList<>();bannerMapper.selectList(new LambdaQueryWrapper<ShopBanner>().eq(ShopBanner::getStatus,1).eq(ShopBanner::getDelFlag,0).orderByDesc(ShopBanner::getSortNo).orderByDesc(ShopBanner::getId)).forEach(b->{Map<String,Object> m=new LinkedHashMap<>();m.put("id",b.getId());m.put("title",b.getTitle());m.put("imageUrl",b.getImageUrl());m.put("linkItemId",b.getLinkItemId());banners.add(m);});r.put("banners",banners);List<Map<String,Object>> cats=new ArrayList<>();categoryMapper.selectList(new LambdaQueryWrapper<ShopCategory>().eq(ShopCategory::getStatus,1).eq(ShopCategory::getDelFlag,0).orderByAsc(ShopCategory::getSortNo).orderByAsc(ShopCategory::getId)).forEach(c->{Map<String,Object> m=new LinkedHashMap<>();m.put("id",c.getId());m.put("categoryType",c.getCategoryType());m.put("name",c.getName());m.put("iconUrl",c.getIconUrl());cats.add(m);});r.put("categories",cats);r.put("partner",partnerProfile(pid));r.put("recommendedFoods",queryItems(ShopItemType.FOOD,pid,true,6));r.put("hotServices",queryItems(ShopItemType.SERVICE,pid,true,6));return r;}
+    @Override public Map<String,Object> list(String authorization,Integer itemType,String keyword,Long categoryId,Boolean recommended){long seller=partnerId(authorization);LambdaQueryWrapper<ShopItem>w=new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getSellerUserId,seller).eq(ShopItem::getStatus,1).eq(ShopItem::getDelFlag,0).orderByDesc(ShopItem::getPublishTime).orderByDesc(ShopItem::getId);if(itemType!=null)w.eq(ShopItem::getItemType,itemType);if(keyword!=null&&!keyword.isBlank())w.like(ShopItem::getTitle,keyword.trim());if(categoryId!=null)w.eq(ShopItem::getCategoryId,categoryId);if(Boolean.TRUE.equals(recommended))w.eq(ShopItem::getIsRecommended,1);List<Map<String,Object>>items=new ArrayList<>();itemMapper.selectList(w).forEach(i->items.add(itemMap(i,userMapper.selectById(i.getSellerUserId()))));return Map.of("items",items);}
+    @Override public Map<String,Object> detail(long itemId){ShopItem i=itemMapper.selectOne(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getId,itemId).eq(ShopItem::getStatus,1).eq(ShopItem::getDelFlag,0));if(i==null)throw new IllegalArgumentException("商品不存在或已下架");Map<String,Object>r=new LinkedHashMap<>();r.put("item",itemMap(i,userMapper.selectById(i.getSellerUserId())));List<Map<String,Object>>images=new ArrayList<>();imageMapper.selectList(new LambdaQueryWrapper<ShopItemImage>().eq(ShopItemImage::getItemId,itemId).eq(ShopItemImage::getDelFlag,0).orderByAsc(ShopItemImage::getSortNo).orderByAsc(ShopItemImage::getId)).forEach(x->{Map<String,Object>m=new LinkedHashMap<>();m.put("id",x.getId());m.put("imageUrl",x.getImageUrl());m.put("sortNo",x.getSortNo());images.add(m);});r.put("images",images);List<Map<String,Object>> reviews=new ArrayList<>();List<ShopItemReview>rs=reviewMapper.selectList(new LambdaQueryWrapper<ShopItemReview>().eq(ShopItemReview::getItemId,itemId).eq(ShopItemReview::getDelFlag,0).orderByDesc(ShopItemReview::getCreateTime).orderByDesc(ShopItemReview::getId));for(ShopItemReview x:rs){SysUser u=userMapper.selectById(x.getReviewerUserId());Map<String,Object>m=new LinkedHashMap<>();m.put("id",x.getId());m.put("rating",x.getRating());m.put("content",x.getContent());m.put("createTime",x.getCreateTime());m.put("reviewerName",u==null?"":u.getNickname());m.put("reviewerAvatarUrl",u==null?null:u.getAvatarUrl());reviews.add(m);}r.put("reviews",reviews);double avg=rs.stream().mapToInt(ShopItemReview::getRating).average().orElse(0);r.put("reviewSummary",Map.of("averageRating",BigDecimal.valueOf(avg),"reviewCount",rs.size()));return r;}
+    private List<Map<String,Object>> queryItems(ShopItemType type,long seller,boolean rec,int limit){if(seller<0)return List.of();LambdaQueryWrapper<ShopItem>w=new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getItemType,type.getCode()).eq(ShopItem::getSellerUserId,seller).eq(ShopItem::getStatus,1).eq(ShopItem::getDelFlag,0).orderByDesc(ShopItem::getSortNo).orderByDesc(ShopItem::getId);if(rec)w.eq(ShopItem::getIsRecommended,1);List<Map<String,Object>>r=new ArrayList<>();itemMapper.selectList(w).stream().limit(limit).forEach(i->r.add(itemMap(i,userMapper.selectById(i.getSellerUserId()))));return r;}
+    private Map<String,Object> partnerProfile(long id){if(id<0)return Map.of("bound",false,"nickname","");SysUser u=userMapper.selectById(id);if(u==null)return Map.of("bound",false,"nickname","");Map<String,Object>m=new LinkedHashMap<>();m.put("bound",true);m.put("nickname",u.getNickname());m.put("phone",u.getUsername());return m;}
+    private long partnerId(String authorization){long uid=currentUserService.requireUserId(authorization);CoupleBinding b=bindingMapper.selectOne(new LambdaQueryWrapper<CoupleBinding>().and(w->w.eq(CoupleBinding::getRequesterUserId,uid).or().eq(CoupleBinding::getTargetUserId,uid)).eq(CoupleBinding::getStatus,"ACCEPTED").last("LIMIT 1"));if(b==null)return -1;return uid==b.getRequesterUserId()?b.getTargetUserId():b.getRequesterUserId();}
+    private Map<String,Object> itemMap(ShopItem i,SysUser u){Map<String,Object>m=new LinkedHashMap<>();m.put("id",i.getId());m.put("itemType",i.getItemType());m.put("title",i.getTitle());m.put("subtitle",i.getSubtitle());m.put("description",i.getDescription());m.put("price",i.getPrice());m.put("stock",i.getStock());m.put("coverUrl",i.getCoverUrl());m.put("serviceDurationMin",i.getServiceDurationMin());m.put("sellerId",i.getSellerUserId());m.put("sellerPhone",u==null?null:u.getUsername());m.put("sellerName",u==null?null:u.getNickname());return m;}
 }

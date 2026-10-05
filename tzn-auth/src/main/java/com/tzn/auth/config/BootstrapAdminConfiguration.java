@@ -1,28 +1,45 @@
 package com.tzn.auth.config;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.tzn.common.entity.SysRole;
+import com.tzn.common.entity.SysUser;
+import com.tzn.common.entity.SysUserRole;
+import com.tzn.common.mapper.SysRoleMapper;
+import com.tzn.common.mapper.SysUserMapper;
+import com.tzn.common.mapper.SysUserRoleMapper;
+import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Configuration
 public class BootstrapAdminConfiguration {
-
     @Bean
-    CommandLineRunner bootstrapAdmin(JdbcTemplate jdbcTemplate,
+    CommandLineRunner bootstrapAdmin(SysUserMapper userMapper, SysRoleMapper roleMapper, SysUserRoleMapper userRoleMapper,
                                      @Value("${auth.bootstrap.admin-password}") String adminPassword) {
         return args -> {
-            Integer userCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM sys_user WHERE username = 'admin'", Integer.class);
-            if (userCount != null && userCount > 0) {
+            SysUser admin = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, "admin"));
+            if (admin != null) {
                 return;
             }
-            jdbcTemplate.update("INSERT INTO sys_user (username, nickname, password, enabled) VALUES (?, ?, ?, ?)",
-                    "admin", "\u7BA1\u7406\u5458", new BCryptPasswordEncoder().encode(adminPassword), true);
-            Long userId = jdbcTemplate.queryForObject("SELECT id FROM sys_user WHERE username = 'admin'", Long.class);
-            Long roleId = jdbcTemplate.queryForObject("SELECT id FROM sys_role WHERE role_code = 'ADMIN'", Long.class);
-            jdbcTemplate.update("INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)", userId, roleId);
+            admin = new SysUser();
+            admin.setUsername("admin");
+            admin.setNickname("管理员");
+            admin.setPassword(new BCryptPasswordEncoder().encode(adminPassword));
+            admin.setEnabled(1);
+            admin.setCreateTime(LocalDateTime.now());
+            admin.setUpdateTime(LocalDateTime.now());
+            userMapper.insert(admin);
+            SysRole role = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, "ADMIN"));
+            if (role == null) {
+                throw new IllegalStateException("ADMIN role not found");
+            }
+            SysUserRole userRole = new SysUserRole();
+            userRole.setUserId(admin.getId());
+            userRole.setRoleId(role.getId());
+            userRoleMapper.insert(userRole);
         };
     }
 }

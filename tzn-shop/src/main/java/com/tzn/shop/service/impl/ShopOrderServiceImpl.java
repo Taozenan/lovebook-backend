@@ -1,108 +1,286 @@
 package com.tzn.shop.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.tzn.common.entity.*;
+import com.tzn.common.mapper.*;
 import com.tzn.shop.dto.ShopOrderCreateRequest;
 import com.tzn.shop.enums.ShopItemStatus;
 import com.tzn.shop.enums.ShopOrderStatus;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopOrderService;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import org.springframework.jdbc.core.JdbcTemplate;
+import java.util.*;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ShopOrderServiceImpl implements ShopOrderService {
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private final JdbcTemplate jdbcTemplate;
-    private final CurrentUserService currentUserService;
+    private static final DateTimeFormatter F = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final ShopOrderMapper orderMapper;
+    private final ShopOrderItemMapper orderItemMapper;
+    private final ShopItemMapper itemMapper;
+    private final ShopUserAccountMapper accountMapper;
+    private final ShopAccountFlowMapper flowMapper;
+    private final ShopOrderTrackMapper trackMapper;
+    private final ShopItemReviewMapper reviewMapper;
+    private final SysUserMapper userMapper;
+    private final CoupleBindingMapper bindingMapper;
+    private final CurrentUserService current;
 
-    public ShopOrderServiceImpl(JdbcTemplate jdbcTemplate, CurrentUserService currentUserService) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.currentUserService = currentUserService;
+    public ShopOrderServiceImpl(ShopOrderMapper o, ShopOrderItemMapper oi, ShopItemMapper i, ShopUserAccountMapper a, ShopAccountFlowMapper f, ShopOrderTrackMapper t, ShopItemReviewMapper r, SysUserMapper u, CoupleBindingMapper b, CurrentUserService c) {
+        orderMapper = o;
+        orderItemMapper = oi;
+        itemMapper = i;
+        accountMapper = a;
+        flowMapper = f;
+        trackMapper = t;
+        reviewMapper = r;
+        userMapper = u;
+        bindingMapper = b;
+        current = c;
     }
 
     @Override
-    public Map<String, Object> account(String authorization) {
-        long userId = currentUserService.requireUserId(authorization);
-        ensureAccount(userId);
-        return jdbcTemplate.queryForMap("SELECT balance, frozen_amount AS frozenAmount FROM shop_user_account WHERE user_id = ? AND del_flag = 0", userId);
+    public Map<String, Object> account(String auth) {
+        long uid = current.requireUserId(auth);
+        ensureAccount(uid);
+        ShopUserAccount a = accountMapper.selectOne(new LambdaQueryWrapper<ShopUserAccount>().eq(ShopUserAccount::getUserId, uid).eq(ShopUserAccount::getDelFlag, 0));
+        return Map.of("balance", a.getBalance(), "frozenAmount", a.getFrozenAmount());
     }
 
     @Override
     @Transactional
-    public Map<String, Object> create(String authorization, ShopOrderCreateRequest request) {
-        long buyerId = currentUserService.requireUserId(authorization);
-        validateRequest(request);
-        Map<String, Object> item = loadPurchasableItem(request.itemId(), buyerId);
-        int quantity = request.quantity();
-        BigDecimal unitPrice = (BigDecimal) item.get("price");
-        BigDecimal total = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        ensureAccount(buyerId);
-        int deducted = jdbcTemplate.update("UPDATE shop_user_account SET balance = balance - ?, update_time = NOW(), version = version + 1 WHERE user_id = ? AND balance >= ? AND del_flag = 0", total, buyerId, total);
-        if (deducted == 0) { throw new IllegalArgumentException("余额不足"); }
-        BigDecimal before = jdbcTemplate.queryForObject("SELECT balance + ? FROM shop_user_account WHERE user_id = ?", BigDecimal.class, total, buyerId);
-        BigDecimal after = jdbcTemplate.queryForObject("SELECT balance FROM shop_user_account WHERE user_id = ?", BigDecimal.class, buyerId);
-        int stockUpdated = jdbcTemplate.update("UPDATE shop_item SET stock = stock - ?, update_time = NOW(), version = version + 1 WHERE id = ? AND stock >= ? AND status = ? AND del_flag = 0", quantity, request.itemId(), quantity, ShopItemStatus.ON_SHELF.getCode());
-        if (stockUpdated == 0) { throw new IllegalArgumentException("库存不足"); }
-        String orderNo = "SO" + System.currentTimeMillis() + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
-        Long orderId = insertOrder(orderNo, buyerId, ((Number) item.get("sellerUserId")).longValue(), total, request);
-        jdbcTemplate.update("INSERT INTO shop_order_item (order_id, item_id, item_title, item_type, unit_price, quantity, subtotal, cover_url, service_duration_min, service_rule, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())", orderId, request.itemId(), item.get("title"), item.get("itemType"), unitPrice, quantity, total, item.get("coverUrl"), item.get("serviceDurationMin"), item.get("serviceRule"));
-        jdbcTemplate.update("INSERT INTO shop_account_flow (user_id, order_id, order_no, flow_type, amount, balance_before, balance_after, remark, create_user, update_user) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)", buyerId, orderId, orderNo, total, before, after, "购买商品", buyerId, buyerId);
-        addTrack(orderId, ShopOrderStatus.WAIT_ACCEPT, "已下单", "订单已支付，等待对方接单", buyerId);
-        Map<String, Object> result = new LinkedHashMap<>(); result.put("id", orderId); result.put("orderNo", orderNo); result.put("status", ShopOrderStatus.WAIT_ACCEPT.getCode()); result.put("totalAmount", total); result.put("remainingBalance", after); return result;
+    public Map<String, Object> create(String auth, ShopOrderCreateRequest req) {
+        long buyer = current.requireUserId(auth);
+        if (req == null || req.itemId() == null || req.quantity() == null || req.quantity() < 1)
+            throw new IllegalArgumentException("商品和购买数量不能为空");
+        ShopItem item = purchasable(req.itemId(), buyer);
+        BigDecimal total = item.getPrice().multiply(BigDecimal.valueOf(req.quantity()));
+        ensureAccount(buyer);
+        ShopUserAccount a = accountMapper.selectOne(new LambdaQueryWrapper<ShopUserAccount>().eq(ShopUserAccount::getUserId, buyer).eq(ShopUserAccount::getDelFlag, 0));
+        BigDecimal before = a.getBalance();
+        if (before.compareTo(total) < 0) throw new IllegalArgumentException("余额不足");
+        a.setBalance(before.subtract(total));
+        a.setUpdateUser(buyer);
+        a.setUpdateTime(LocalDateTime.now());
+        accountMapper.updateById(a);
+        if (itemMapper.update(null, new LambdaUpdateWrapper<ShopItem>().eq(ShopItem::getId, item.getId()).ge(ShopItem::getStock, req.quantity()).eq(ShopItem::getStatus, 1).eq(ShopItem::getDelFlag, 0).setSql("stock = stock - " + req.quantity()).set(ShopItem::getUpdateUser, buyer).set(ShopItem::getUpdateTime, LocalDateTime.now())) == 0)
+            throw new IllegalArgumentException("库存不足");
+        String no = "SO" + System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+        ShopOrder o = new ShopOrder();
+        o.setOrderNo(no);
+        o.setBuyerUserId(buyer);
+        o.setSellerUserId(item.getSellerUserId());
+        o.setTotalAmount(total);
+        o.setStatus(1);
+        o.setIsReviewed(0);
+        o.setPaymentStatus(1);
+        o.setPaymentMethod(1);
+        o.setPaidAmount(total);
+        o.setPaidTime(LocalDateTime.now());
+        o.setRemark(req.remark());
+        o.setAppointmentTime(req.appointmentTime() == null || req.appointmentTime().isBlank() ? null : LocalDateTime.parse(req.appointmentTime(), F));
+        o.setDelFlag(0);
+        o.setCreateUser(buyer);
+        o.setUpdateUser(buyer);
+        o.setCreateTime(LocalDateTime.now());
+        o.setUpdateTime(LocalDateTime.now());
+        o.setVersion(0);
+        orderMapper.insert(o);
+        ShopOrderItem oi = new ShopOrderItem();
+        oi.setOrderId(o.getId());
+        oi.setItemId(item.getId());
+        oi.setItemTitle(item.getTitle());
+        oi.setItemType(item.getItemType());
+        oi.setUnitPrice(item.getPrice());
+        oi.setQuantity(req.quantity());
+        oi.setSubtotal(total);
+        oi.setCoverUrl(item.getCoverUrl());
+        oi.setServiceDurationMin(item.getServiceDurationMin());
+        oi.setServiceRule(item.getServiceRule());
+        oi.setCreateTime(LocalDateTime.now());
+        orderItemMapper.insert(oi);
+        ShopAccountFlow flow = new ShopAccountFlow();
+        flow.setUserId(buyer);
+        flow.setOrderId(o.getId());
+        flow.setOrderNo(no);
+        flow.setFlowType(1);
+        flow.setAmount(total);
+        flow.setBalanceBefore(before);
+        flow.setBalanceAfter(a.getBalance());
+        flow.setRemark("购买商品");
+        flow.setCreateUser(buyer);
+        flow.setUpdateUser(buyer);
+        flow.setCreateTime(LocalDateTime.now());
+        flowMapper.insert(flow);
+        addTrack(o.getId(), 1, "已下单", "订单已支付，等待对方接单", buyer);
+        return Map.of("id", o.getId(), "orderNo", no, "status", 1, "totalAmount", total, "remainingBalance", a.getBalance());
     }
 
-    @Override public Map<String, Object> buyerList(String authorization, Integer status, int pageNum, int pageSize) { return participantPageQuery(currentUserService.requireUserId(authorization), status, pageNum, pageSize); }
-    @Override public Map<String, Object> sellerList(String authorization, Integer status, int pageNum, int pageSize) { return pageQuery(currentUserService.requireUserId(authorization), false, status, pageNum, pageSize); }
-
-    private Map<String, Object> participantPageQuery(long userId, Integer status, int pageNum, int pageSize) {
-        if (pageNum < 1 || pageSize < 1 || pageSize > 100) { throw new IllegalArgumentException("分页参数不合法"); }
-        if (status != null && status == 0) { status = null; }
-        if (status != null) { ShopOrderStatus.fromCode(status); }
-        StringBuilder sql = new StringBuilder("SELECT o.id, o.order_no AS orderNo, o.total_amount AS totalAmount, o.status, o.is_reviewed AS isReviewed, o.is_reviewed AS reviewed, CASE WHEN o.buyer_user_id = ? AND o.status = 3 AND o.is_reviewed = 0 THEN 1 ELSE 0 END AS canReview, o.create_time AS createTime, oi.item_title AS itemTitle, oi.item_type AS itemType, oi.quantity, oi.cover_url AS coverUrl, b.nickname AS buyerName, b.avatar_url AS buyerAvatarUrl FROM shop_order o JOIN sys_user b ON b.id = o.buyer_user_id JOIN shop_order_item oi ON oi.order_id = o.id WHERE (o.buyer_user_id = ? OR o.seller_user_id = ?) AND o.del_flag = 0");
-        List<Object> args = new ArrayList<>(); args.add(userId); args.add(userId); args.add(userId);
-        if (status != null) { sql.append(" AND o.status = ?"); args.add(status); }
-        sql.append(" ORDER BY o.create_time DESC, o.id DESC LIMIT ? OFFSET ?"); args.add(pageSize); args.add((pageNum - 1) * pageSize);
-        String countSql = "SELECT COUNT(*) FROM shop_order WHERE (buyer_user_id = ? OR seller_user_id = ?) AND del_flag = 0" + (status == null ? "" : " AND status = ?");
-        Integer total = status == null ? jdbcTemplate.queryForObject(countSql, Integer.class, userId, userId) : jdbcTemplate.queryForObject(countSql, Integer.class, userId, userId, status);
-        return Map.of("items", jdbcTemplate.queryForList(sql.toString(), args.toArray()), "total", total, "pageNum", pageNum, "pageSize", pageSize);
-    }
-    private Map<String, Object> pageQuery(long userId, boolean buyer, Integer status, int pageNum, int pageSize) {
-        if (pageNum < 1 || pageSize < 1 || pageSize > 100) { throw new IllegalArgumentException("分页参数不合法"); }
-        if (status != null && status == 0) { status = null; }
-        if (status != null) { ShopOrderStatus.fromCode(status); }
-        String owner = buyer ? "buyer_user_id" : "seller_user_id";
-        StringBuilder sql = new StringBuilder("SELECT o.id, o.order_no AS orderNo, o.total_amount AS totalAmount, o.status, o.is_reviewed AS isReviewed, o.is_reviewed AS reviewed, CASE WHEN o.buyer_user_id = ? AND o.status = 3 AND o.is_reviewed = 0 THEN 1 ELSE 0 END AS canReview, o.create_time AS createTime, oi.item_title AS itemTitle, oi.item_type AS itemType, oi.quantity, oi.cover_url AS coverUrl, b.nickname AS buyerName, b.avatar_url AS buyerAvatarUrl FROM shop_order o JOIN sys_user b ON b.id = o.buyer_user_id JOIN shop_order_item oi ON oi.order_id = o.id WHERE o.").append(owner).append(" = ? AND o.del_flag = 0");
-        List<Object> args = new ArrayList<>(); args.add(userId); args.add(userId);
-        if (status != null) { sql.append(" AND o.status = ?"); args.add(status); }
-        sql.append(" ORDER BY o.create_time DESC, o.id DESC LIMIT ? OFFSET ?"); args.add(pageSize); args.add((pageNum - 1) * pageSize);
-        String countSql = "SELECT COUNT(*) FROM shop_order WHERE " + owner + " = ? AND del_flag = 0" + (status == null ? "" : " AND status = ?");
-        Integer total = status == null ? jdbcTemplate.queryForObject(countSql, Integer.class, userId) : jdbcTemplate.queryForObject(countSql, Integer.class, userId, status);
-        return Map.of("items", jdbcTemplate.queryForList(sql.toString(), args.toArray()), "total", total, "pageNum", pageNum, "pageSize", pageSize);
+    @Override
+    public Map<String, Object> buyerList(String auth, Integer status, int pn, int ps) {
+        return page(current.requireUserId(auth), true, status, pn, ps);
     }
 
-    @Override public Map<String, Object> detail(String authorization, long orderId) {
-        long userId = currentUserService.requireUserId(authorization);
-        List<Map<String, Object>> orders = jdbcTemplate.queryForList("SELECT o.id, o.order_no AS orderNo, o.buyer_user_id AS buyerUserId, o.seller_user_id AS sellerUserId, o.total_amount AS totalAmount, o.status, o.is_reviewed AS isReviewed, o.payment_status AS paymentStatus, o.payment_method AS paymentMethod, o.paid_amount AS paidAmount, o.paid_time AS paidTime, o.appointment_time AS appointmentTime, o.remark, o.create_time AS createTime, b.nickname AS buyerName, s.nickname AS sellerName FROM shop_order o JOIN sys_user b ON b.id = o.buyer_user_id JOIN sys_user s ON s.id = o.seller_user_id WHERE o.id = ? AND (o.buyer_user_id = ? OR o.seller_user_id = ?) AND o.del_flag = 0", orderId, userId, userId);
-        if (orders.isEmpty()) { throw new IllegalArgumentException("订单不存在或无权查看"); }
-        Map<String, Object> result = new LinkedHashMap<>(); result.put("order", orders.get(0)); result.put("canAccept", userId == ((Number) orders.get(0).get("sellerUserId")).longValue() && ((Number) orders.get(0).get("status")).intValue() == ShopOrderStatus.WAIT_ACCEPT.getCode()); result.put("canComplete", userId == ((Number) orders.get(0).get("buyerUserId")).longValue() && ((Number) orders.get(0).get("status")).intValue() == ShopOrderStatus.ACCEPTED.getCode()); result.put("reviewed", ((Number) orders.get(0).get("isReviewed")).intValue() == 1); result.put("canReview", userId == ((Number) orders.get(0).get("buyerUserId")).longValue() && ((Number) orders.get(0).get("status")).intValue() == ShopOrderStatus.COMPLETED.getCode() && !((Boolean) result.get("reviewed"))); result.put("review", jdbcTemplate.queryForList("SELECT r.id, r.rating, r.content, r.create_time AS createTime, u.nickname AS reviewerName, u.avatar_url AS reviewerAvatarUrl FROM shop_item_review r JOIN sys_user u ON u.id = r.reviewer_user_id WHERE r.order_id = ? AND r.del_flag = 0", orderId)); result.put("items", jdbcTemplate.queryForList("SELECT id, item_id AS itemId, item_title AS itemTitle, item_type AS itemType, unit_price AS unitPrice, quantity, subtotal, cover_url AS coverUrl, service_duration_min AS serviceDurationMin, service_rule AS serviceRule FROM shop_order_item WHERE order_id = ?", orderId)); result.put("tracks", jdbcTemplate.queryForList("SELECT status, title, description, create_time AS operateTime FROM shop_order_track WHERE order_id = ? ORDER BY create_time ASC, id ASC", orderId)); return result;
+    @Override
+    public Map<String, Object> sellerList(String auth, Integer status, int pn, int ps) {
+        return page(current.requireUserId(auth), false, status, pn, ps);
     }
 
-    @Override @Transactional public void accept(String authorization, long orderId) { long sellerId = currentUserService.requireUserId(authorization); int updated = jdbcTemplate.update("UPDATE shop_order SET status = ?, seller_confirm_time = NOW(), update_user = ?, update_time = NOW(), version = version + 1 WHERE id = ? AND seller_user_id = ? AND status = ? AND del_flag = 0", ShopOrderStatus.ACCEPTED.getCode(), sellerId, orderId, sellerId, ShopOrderStatus.WAIT_ACCEPT.getCode()); if (updated == 0) { throw new IllegalArgumentException("订单不存在、已处理或无权接单"); } addTrack(orderId, ShopOrderStatus.ACCEPTED, "已接待", "对方已确认接单", sellerId); }
-    @Override @Transactional public void complete(String authorization, long orderId) { long buyerId = currentUserService.requireUserId(authorization); int updated = jdbcTemplate.update("UPDATE shop_order SET status = ?, buyer_confirm_time = NOW(), completed_time = NOW(), update_user = ?, update_time = NOW(), version = version + 1 WHERE id = ? AND buyer_user_id = ? AND status = ? AND del_flag = 0", ShopOrderStatus.COMPLETED.getCode(), buyerId, orderId, buyerId, ShopOrderStatus.ACCEPTED.getCode()); if (updated == 0) { throw new IllegalArgumentException("订单不存在、状态不正确或无权确认"); } addTrack(orderId, ShopOrderStatus.COMPLETED, "已完成", "买家已确认完成", buyerId); }
+    private Map<String, Object> page(long uid, boolean buyer, Integer status, int pn, int ps) {
+        if (pn < 1 || ps < 1 || ps > 100) throw new IllegalArgumentException("分页参数不合法");
+        LambdaQueryWrapper<ShopOrder> w = new LambdaQueryWrapper<ShopOrder>().eq(ShopOrder::getDelFlag, 0).orderByDesc(ShopOrder::getCreateTime).orderByDesc(ShopOrder::getId);
+        if (buyer) {
+            w.eq(ShopOrder::getBuyerUserId, uid);
+        } else {
+            w.eq(ShopOrder::getSellerUserId, uid);
+        }
+        if (status != null && status != 0) {
+            ShopOrderStatus.fromCode(status);
+            w.eq(ShopOrder::getStatus, status);
+        }
+        List<ShopOrder> all = orderMapper.selectList(w);
+        int from = Math.min((pn - 1) * ps, all.size());
+        int to = Math.min(from + ps, all.size());
+        List<ShopOrder> os = all.subList(from, to);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (ShopOrder o : os) {
+            ShopOrderItem i = orderItemMapper.selectOne(new LambdaQueryWrapper<ShopOrderItem>().eq(ShopOrderItem::getOrderId, o.getId()).last("LIMIT 1"));
+            SysUser b = userMapper.selectById(o.getBuyerUserId());
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", o.getId());
+            m.put("orderNo", o.getOrderNo());
+            m.put("totalAmount", o.getTotalAmount());
+            m.put("status", o.getStatus());
+            m.put("isReviewed", o.getIsReviewed());
+            m.put("reviewed", o.getIsReviewed());
+            m.put("canReview", buyer && o.getStatus() == 3 && o.getIsReviewed() == 0);
+            m.put("createTime", o.getCreateTime());
+            m.put("itemTitle", i == null ? null : i.getItemTitle());
+            m.put("itemType", i == null ? null : i.getItemType());
+            m.put("quantity", i == null ? null : i.getQuantity());
+            m.put("coverUrl", i == null ? null : i.getCoverUrl());
+            m.put("buyerName", b == null ? null : b.getNickname());
+            m.put("buyerAvatarUrl", b == null ? null : b.getAvatarUrl());
+            rows.add(m);
+        }
+        return Map.of("items", rows, "total", orderMapper.selectCount(w), "pageNum", pn, "pageSize", ps);
+    }
 
-    private Map<String, Object> loadPurchasableItem(long itemId, long buyerId) { List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT i.id, i.item_type AS itemType, i.title, i.price, i.stock, i.cover_url AS coverUrl, i.seller_user_id AS sellerUserId, i.service_duration_min AS serviceDurationMin, i.service_rule AS serviceRule FROM shop_item i WHERE i.id = ? AND i.status = ? AND i.del_flag = 0 AND i.seller_user_id = (SELECT CASE WHEN requester_user_id = ? THEN target_user_id ELSE requester_user_id END FROM couple_binding WHERE (requester_user_id = ? OR target_user_id = ?) AND status = 'ACCEPTED' LIMIT 1)", itemId, ShopItemStatus.ON_SHELF.getCode(), buyerId, buyerId, buyerId); if (rows.isEmpty()) { throw new IllegalArgumentException("商品不存在、已下架或不属于绑定对象"); } return rows.get(0); }
-    private void validateRequest(ShopOrderCreateRequest request) { if (request == null || request.itemId() == null || request.quantity() == null || request.quantity() < 1) { throw new IllegalArgumentException("商品和购买数量不能为空"); } }
-    private Long insertOrder(String orderNo, long buyerId, long sellerId, BigDecimal total, ShopOrderCreateRequest request) { LocalDateTime appointment = null; if (request.appointmentTime() != null && !request.appointmentTime().isBlank()) { appointment = LocalDateTime.parse(request.appointmentTime(), DATE_TIME); } jdbcTemplate.update("INSERT INTO shop_order (order_no, buyer_user_id, seller_user_id, total_amount, status, payment_status, payment_method, paid_amount, paid_time, remark, appointment_time, create_user, update_user) VALUES (?, ?, ?, ?, ?, 1, 1, ?, NOW(), ?, ?, ?, ?)", orderNo, buyerId, sellerId, total, ShopOrderStatus.WAIT_ACCEPT.getCode(), total, request.remark(), appointment == null ? null : java.sql.Timestamp.valueOf(appointment), buyerId, buyerId); return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class); }
-    private void ensureAccount(long userId) { jdbcTemplate.update("INSERT IGNORE INTO shop_user_account (user_id, create_user, update_user) VALUES (?, ?, ?)", userId, userId, userId); }
-    private void addTrack(long orderId, ShopOrderStatus status, String title, String description, long userId) { jdbcTemplate.update("INSERT INTO shop_order_track (order_id, status, title, description, operate_user_id, create_user, update_user) VALUES (?, ?, ?, ?, ?, ?, ?)", orderId, status.getCode(), title, description, userId, userId, userId); }
+    @Override
+    public Map<String, Object> detail(String auth, long id) {
+        long uid = current.requireUserId(auth);
+        ShopOrder o = orderMapper.selectOne(new LambdaQueryWrapper<ShopOrder>().eq(ShopOrder::getId, id).eq(ShopOrder::getDelFlag, 0).and(w -> w.eq(ShopOrder::getBuyerUserId, uid).or().eq(ShopOrder::getSellerUserId, uid)));
+        if (o == null) throw new IllegalArgumentException("订单不存在或无权查看");
+        Map<String, Object> r = new LinkedHashMap<>();
+        Map<String, Object> om = new LinkedHashMap<>();
+        om.put("id", o.getId());
+        om.put("orderNo", o.getOrderNo());
+        om.put("buyerUserId", o.getBuyerUserId());
+        om.put("sellerUserId", o.getSellerUserId());
+        om.put("totalAmount", o.getTotalAmount());
+        om.put("status", o.getStatus());
+        om.put("isReviewed", o.getIsReviewed());
+        om.put("paymentStatus", o.getPaymentStatus());
+        om.put("paymentMethod", o.getPaymentMethod());
+        om.put("paidAmount", o.getPaidAmount());
+        om.put("paidTime", o.getPaidTime());
+        om.put("appointmentTime", o.getAppointmentTime());
+        om.put("remark", o.getRemark());
+        om.put("createTime", o.getCreateTime());
+        SysUser bu = userMapper.selectById(o.getBuyerUserId()), su = userMapper.selectById(o.getSellerUserId());
+        om.put("buyerName", bu == null ? null : bu.getNickname());
+        om.put("sellerName", su == null ? null : su.getNickname());
+        r.put("order", om);
+        r.put("canAccept", uid == o.getSellerUserId() && o.getStatus() == 1);
+        r.put("canComplete", uid == o.getBuyerUserId() && o.getStatus() == 2);
+        r.put("reviewed", o.getIsReviewed() == 1);
+        r.put("canReview", uid == o.getBuyerUserId() && o.getStatus() == 3 && o.getIsReviewed() == 0);
+        ShopOrderItem i = orderItemMapper.selectOne(new LambdaQueryWrapper<ShopOrderItem>().eq(ShopOrderItem::getOrderId, id).last("LIMIT 1"));
+        r.put("items", i == null ? List.of() : List.of(i));
+        r.put("review", reviewMapper.selectList(new LambdaQueryWrapper<ShopItemReview>().eq(ShopItemReview::getOrderId, id).eq(ShopItemReview::getDelFlag, 0)));
+        r.put("tracks", trackMapper.selectList(new LambdaQueryWrapper<ShopOrderTrack>().eq(ShopOrderTrack::getOrderId, id).orderByAsc(ShopOrderTrack::getCreateTime).orderByAsc(ShopOrderTrack::getId)));
+        return r;
+    }
+
+    @Override
+    @Transactional
+    public void accept(String auth, long id) {
+        long uid = current.requireUserId(auth);
+        ShopOrder o = owned(id, uid, false);
+        if (o.getStatus() != 1) throw new IllegalArgumentException("订单不存在、已处理或无权接单");
+        o.setStatus(2);
+        o.setSellerConfirmTime(LocalDateTime.now());
+        o.setUpdateUser(uid);
+        o.setUpdateTime(LocalDateTime.now());
+        orderMapper.updateById(o);
+        addTrack(id, 2, "已接待", "对方已确认接单", uid);
+    }
+
+    @Override
+    @Transactional
+    public void complete(String auth, long id) {
+        long uid = current.requireUserId(auth);
+        ShopOrder o = owned(id, uid, true);
+        if (o.getStatus() != 2) throw new IllegalArgumentException("订单不存在、状态不正确或无权确认");
+        o.setStatus(3);
+        o.setBuyerConfirmTime(LocalDateTime.now());
+        o.setCompletedTime(LocalDateTime.now());
+        o.setUpdateUser(uid);
+        o.setUpdateTime(LocalDateTime.now());
+        orderMapper.updateById(o);
+        addTrack(id, 3, "已完成", "买家已确认完成", uid);
+    }
+
+    private ShopOrder owned(long id, long uid, boolean buyer) {
+        LambdaQueryWrapper<ShopOrder> w = new LambdaQueryWrapper<ShopOrder>().eq(ShopOrder::getId, id).eq(ShopOrder::getDelFlag, 0);
+        if (buyer) {
+            w.eq(ShopOrder::getBuyerUserId, uid);
+        } else {
+            w.eq(ShopOrder::getSellerUserId, uid);
+        }
+        return orderMapper.selectOne(w);
+    }
+
+    private ShopItem purchasable(long id, long buyer) {
+        CoupleBinding b = bindingMapper.selectOne(new LambdaQueryWrapper<CoupleBinding>().and(w -> w.eq(CoupleBinding::getRequesterUserId, buyer).or().eq(CoupleBinding::getTargetUserId, buyer)).eq(CoupleBinding::getStatus, "ACCEPTED").last("LIMIT 1"));
+        if (b == null) throw new IllegalArgumentException("请先绑定对象");
+        long seller = b.getRequesterUserId() == buyer ? b.getTargetUserId() : b.getRequesterUserId();
+        ShopItem i = itemMapper.selectOne(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getId, id).eq(ShopItem::getSellerUserId, seller).eq(ShopItem::getStatus, 1).eq(ShopItem::getDelFlag, 0));
+        if (i == null) throw new IllegalArgumentException("商品不存在、已下架或不属于绑定对象");
+        return i;
+    }
+
+    private void ensureAccount(long uid) {
+        if (accountMapper.selectCount(new LambdaQueryWrapper<ShopUserAccount>().eq(ShopUserAccount::getUserId, uid)) == 0) {
+            ShopUserAccount a = new ShopUserAccount();
+            a.setUserId(uid);
+            a.setBalance(BigDecimal.ZERO);
+            a.setFrozenAmount(BigDecimal.ZERO);
+            a.setDelFlag(0);
+            a.setCreateUser(uid);
+            a.setUpdateUser(uid);
+            a.setCreateTime(LocalDateTime.now());
+            a.setUpdateTime(LocalDateTime.now());
+            accountMapper.insert(a);
+        }
+    }
+
+    private void addTrack(long id, int status, String title, String desc, long uid) {
+        ShopOrderTrack t = new ShopOrderTrack();
+        t.setOrderId(id);
+        t.setStatus(status);
+        t.setTitle(title);
+        t.setDescription(desc);
+        t.setOperateUserId(uid);
+        t.setCreateUser(uid);
+        t.setUpdateUser(uid);
+        t.setCreateTime(LocalDateTime.now());
+        trackMapper.insert(t);
+    }
 }
-
-
-
