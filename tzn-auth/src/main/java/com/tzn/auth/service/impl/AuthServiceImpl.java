@@ -11,6 +11,7 @@ import com.tzn.common.mapper.SysRoleMapper;
 import com.tzn.common.mapper.SysUserMapper;
 import com.tzn.common.mapper.SysUserRoleMapper;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -127,7 +128,10 @@ public class AuthServiceImpl implements AuthService {
 
     private String createToken(String username, List<String> roles) {
         Instant now = Instant.now();
-        return Jwts.builder().subject(username).claim("roles", roles).issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(expiresSeconds))).signWith(signingKey).compact();
+        JwtBuilder builder = Jwts.builder().subject(username).claim("roles", roles).issuedAt(Date.from(now));
+        if (expiresSeconds > 0) {
+            builder.expiration(Date.from(now.plusSeconds(expiresSeconds)));
+        }
+        return builder.signWith(signingKey).compact();
     }
 }

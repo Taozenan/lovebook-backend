@@ -25,7 +25,7 @@ server:
 auth:
   jwt:
     secret: ${JWT_SECRET}
-    expires: 86400
+    expires: 0
   bootstrap:
     admin-password: ${INITIAL_ADMIN_PASSWORD}
 
