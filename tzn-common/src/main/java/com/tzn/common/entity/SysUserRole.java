@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 public class SysUserRole {
     @TableField("user_id")
     private Long userId;
+
     @TableField("role_id")
     private Long roleId;
 

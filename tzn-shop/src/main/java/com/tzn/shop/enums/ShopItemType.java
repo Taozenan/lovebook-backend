@@ -1,7 +1,9 @@
 package com.tzn.shop.enums;
 
 public enum ShopItemType {
-    FOOD(1, "餐品"), SERVICE(2, "服务"), PRODUCT(3, "商品");
+    FOOD(1, "餐品"),
+    SERVICE(2, "服务"),
+    PRODUCT(3, "商品");
     private final int code;
     private final String description;
 

@@ -1,7 +1,6 @@
 package com.tzn.common.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -9,19 +8,27 @@ import java.time.LocalDateTime;
 public class ShopUserAccount {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("user_id")
     private Long userId;
+
     private BigDecimal balance;
+
     @TableField("frozen_amount")
     private BigDecimal frozenAmount;
+
     @TableField("del_flag")
     private Integer delFlag;
+
     @TableField("create_user")
     private Long createUser;
+
     @TableField("update_user")
     private Long updateUser;
+
     @TableField("create_time")
     private LocalDateTime createTime;
+
     @TableField("update_time")
     private LocalDateTime updateTime;
 

@@ -1,6 +1,9 @@
 package com.tzn.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.LocalDateTime;
 
@@ -8,16 +11,22 @@ import java.time.LocalDateTime;
 public class ShopOrderTrack {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("order_id")
     private Long orderId;
+
     private Integer status;
     private String title, description;
+
     @TableField("operate_user_id")
     private Long operateUserId;
+
     @TableField("create_user")
     private Long createUser;
+
     @TableField("update_user")
     private Long updateUser;
+
     @TableField("create_time")
     private LocalDateTime createTime;
 

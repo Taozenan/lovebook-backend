@@ -10,24 +10,23 @@ import com.tzn.common.entity.SysUserRole;
 import com.tzn.common.mapper.SysRoleMapper;
 import com.tzn.common.mapper.SysUserMapper;
 import com.tzn.common.mapper.SysUserRoleMapper;
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.crypto.SecretKey;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -38,9 +37,12 @@ public class AuthServiceImpl implements AuthService {
     private final SecretKey signingKey;
     private final long expiresSeconds;
 
-    public AuthServiceImpl(SysUserMapper userMapper, SysRoleMapper roleMapper, SysUserRoleMapper userRoleMapper,
-                           @Value("${auth.jwt.secret}") String jwtSecret,
-                           @Value("${auth.jwt.expires}") long expiresSeconds) {
+    public AuthServiceImpl(
+            SysUserMapper userMapper,
+            SysRoleMapper roleMapper,
+            SysUserRoleMapper userRoleMapper,
+            @Value("${auth.jwt.secret}") String jwtSecret,
+            @Value("${auth.jwt.expires}") long expiresSeconds) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.userRoleMapper = userRoleMapper;
@@ -50,16 +52,26 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Map<String, Object> login(LoginRequest request) {
-        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.username()));
+        SysUser user =
+                userMapper.selectOne(
+                        new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.username()));
         if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new IllegalArgumentException("账号或密码错误");
         }
         if (!Integer.valueOf(1).equals(user.getEnabled())) {
             throw new IllegalArgumentException("账号已被禁用");
         }
-        List<Long> roleIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, user.getId()))
-                .stream().map(SysUserRole::getRoleId).toList();
-        List<String> roles = roleIds.isEmpty() ? List.of() : roleMapper.selectBatchIds(roleIds).stream().map(SysRole::getRoleCode).toList();
+        List<Long> roleIds =
+                userRoleMapper
+                        .selectList(
+                                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, user.getId()))
+                        .stream()
+                        .map(SysUserRole::getRoleId)
+                        .toList();
+        List<String> roles =
+                roleIds.isEmpty()
+                        ? List.of()
+                        : roleMapper.selectBatchIds(roleIds).stream().map(SysRole::getRoleCode).toList();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("token", createToken(user.getUsername(), roles));
         result.put("username", user.getUsername());
@@ -74,7 +86,8 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void register(String phone, String nickname, String password) {
         String username = phone.trim();
-        if (userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username)) > 0) {
+        if (userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username))
+                > 0) {
             throw new IllegalArgumentException("该手机号已注册");
         }
         SysUser user = new SysUser();
@@ -85,7 +98,8 @@ public class AuthServiceImpl implements AuthService {
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
         userMapper.insert(user);
-        SysRole role = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, "USER"));
+        SysRole role =
+                roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, "USER"));
         if (role == null) {
             throw new IllegalArgumentException("默认用户角色不存在");
         }
@@ -98,7 +112,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void updateAvatar(String authorization, AvatarUpdateRequest request) {
         SysUser user = currentUserEntity(authorization);
-        String avatarUrl = request == null || request.avatarUrl() == null ? null : request.avatarUrl().trim();
+        String avatarUrl =
+                request == null || request.avatarUrl() == null ? null : request.avatarUrl().trim();
         if (avatarUrl != null && avatarUrl.length() > 500) {
             throw new IllegalArgumentException("头像地址不能超过500个字符");
         }
@@ -113,15 +128,22 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("请先登录");
         }
         try {
-            return Jwts.parser().verifyWith(signingKey).build()
-                    .parseSignedClaims(authorization.substring(7)).getPayload().getSubject();
+            return Jwts.parser()
+                    .verifyWith(signingKey)
+                    .build()
+                    .parseSignedClaims(authorization.substring(7))
+                    .getPayload()
+                    .getSubject();
         } catch (JwtException exception) {
             throw new IllegalArgumentException("登录已失效，请重新登录");
         }
     }
 
     private SysUser currentUserEntity(String authorization) {
-        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, currentUsername(authorization)));
+        SysUser user =
+                userMapper.selectOne(
+                        new LambdaQueryWrapper<SysUser>()
+                                .eq(SysUser::getUsername, currentUsername(authorization)));
         if (user == null || !Integer.valueOf(1).equals(user.getEnabled())) {
             throw new IllegalArgumentException("用户不存在或已禁用");
         }
@@ -130,7 +152,8 @@ public class AuthServiceImpl implements AuthService {
 
     private String createToken(String username, List<String> roles) {
         Instant now = Instant.now();
-        JwtBuilder builder = Jwts.builder().subject(username).claim("roles", roles).issuedAt(Date.from(now));
+        JwtBuilder builder =
+                Jwts.builder().subject(username).claim("roles", roles).issuedAt(Date.from(now));
         if (expiresSeconds > 0) {
             builder.expiration(Date.from(now.plusSeconds(expiresSeconds)));
         }

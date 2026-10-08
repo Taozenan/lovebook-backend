@@ -4,22 +4,20 @@ import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
-import com.qcloud.cos.model.GeneratePresignedUrlRequest;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.region.Region;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Locale;
-import java.util.UUID;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class ShopCosStorageService {
@@ -51,7 +49,8 @@ public class ShopCosStorageService {
 
     public String upload(long userId, MultipartFile file) {
         validate(file);
-        String key = "images/" + userId + "/" + UUID.randomUUID().toString().replace("-", "") + extension(file);
+        String key =
+                "images/" + userId + "/" + UUID.randomUUID().toString().replace("-", "") + extension(file);
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(file.getSize());
         metadata.setContentType(file.getContentType());
@@ -88,7 +87,8 @@ public class ShopCosStorageService {
     }
 
     private String stableUrl(String key) {
-        return "/api/shop/upload/object?key=" + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
+        return "/api/shop/upload/object?key="
+                + java.net.URLEncoder.encode(key, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private void validate(MultipartFile file) {
@@ -98,7 +98,8 @@ public class ShopCosStorageService {
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new IllegalArgumentException("图片不能超过5MB");
         }
-        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        String contentType =
+                file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
         if (!contentType.startsWith("image/")) {
             throw new IllegalArgumentException("只能上传图片文件");
         }

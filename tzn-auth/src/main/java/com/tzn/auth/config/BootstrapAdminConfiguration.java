@@ -7,22 +7,25 @@ import com.tzn.common.entity.SysUserRole;
 import com.tzn.common.mapper.SysRoleMapper;
 import com.tzn.common.mapper.SysUserMapper;
 import com.tzn.common.mapper.SysUserRoleMapper;
-
-import java.time.LocalDateTime;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.time.LocalDateTime;
+
 @Configuration
 public class BootstrapAdminConfiguration {
     @Bean
-    CommandLineRunner bootstrapAdmin(SysUserMapper userMapper, SysRoleMapper roleMapper, SysUserRoleMapper userRoleMapper,
-                                     @Value("${auth.bootstrap.admin-password}") String adminPassword) {
+    CommandLineRunner bootstrapAdmin(
+            SysUserMapper userMapper,
+            SysRoleMapper roleMapper,
+            SysUserRoleMapper userRoleMapper,
+            @Value("${auth.bootstrap.admin-password}") String adminPassword) {
         return args -> {
-            SysUser admin = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, "admin"));
+            SysUser admin =
+                    userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, "admin"));
             if (admin != null) {
                 return;
             }
@@ -34,7 +37,8 @@ public class BootstrapAdminConfiguration {
             admin.setCreateTime(LocalDateTime.now());
             admin.setUpdateTime(LocalDateTime.now());
             userMapper.insert(admin);
-            SysRole role = roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, "ADMIN"));
+            SysRole role =
+                    roleMapper.selectOne(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, "ADMIN"));
             if (role == null) {
                 throw new IllegalStateException("ADMIN role not found");
             }

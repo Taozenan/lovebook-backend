@@ -11,13 +11,12 @@ import com.tzn.shop.dto.ShopReviewCreateRequest;
 import com.tzn.shop.enums.ShopOrderStatus;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopReviewService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ShopReviewServiceImpl implements ShopReviewService {
@@ -26,7 +25,8 @@ public class ShopReviewServiceImpl implements ShopReviewService {
     private final ShopItemReviewMapper reviewMapper;
     private final CurrentUserService currentUserService;
 
-    public ShopReviewServiceImpl(ShopOrderMapper o, ShopOrderItemMapper oi, ShopItemReviewMapper r, CurrentUserService c) {
+    public ShopReviewServiceImpl(
+            ShopOrderMapper o, ShopOrderItemMapper oi, ShopItemReviewMapper r, CurrentUserService c) {
         orderMapper = o;
         orderItemMapper = oi;
         reviewMapper = r;
@@ -35,18 +35,30 @@ public class ShopReviewServiceImpl implements ShopReviewService {
 
     @Override
     @Transactional
-    public Map<String, Object> create(String authorization, long orderId, ShopReviewCreateRequest request) {
+    public Map<String, Object> create(
+            String authorization, long orderId, ShopReviewCreateRequest request) {
         long reviewer = currentUserService.requireUserId(authorization);
         validate(request);
-        ShopOrder order = orderMapper.selectOne(new LambdaQueryWrapper<ShopOrder>().eq(ShopOrder::getId, orderId).eq(ShopOrder::getDelFlag, 0));
+        ShopOrder order =
+                orderMapper.selectOne(
+                        new LambdaQueryWrapper<ShopOrder>()
+                                .eq(ShopOrder::getId, orderId)
+                                .eq(ShopOrder::getDelFlag, 0));
         if (order == null) throw new IllegalArgumentException("订单不存在");
         if (!Long.valueOf(reviewer).equals(order.getBuyerUserId()))
             throw new IllegalArgumentException("只有下单方可以评价");
         if (!Integer.valueOf(ShopOrderStatus.COMPLETED.getCode()).equals(order.getStatus()))
             throw new IllegalArgumentException("订单完成后才可以评价");
-        if (reviewMapper.selectCount(new LambdaQueryWrapper<ShopItemReview>().eq(ShopItemReview::getOrderId, orderId).eq(ShopItemReview::getDelFlag, 0)) > 0)
-            throw new IllegalArgumentException("该订单已经评价过了");
-        ShopOrderItem item = orderItemMapper.selectOne(new LambdaQueryWrapper<ShopOrderItem>().eq(ShopOrderItem::getOrderId, orderId).last("LIMIT 1"));
+        if (reviewMapper.selectCount(
+                new LambdaQueryWrapper<ShopItemReview>()
+                        .eq(ShopItemReview::getOrderId, orderId)
+                        .eq(ShopItemReview::getDelFlag, 0))
+                > 0) throw new IllegalArgumentException("该订单已经评价过了");
+        ShopOrderItem item =
+                orderItemMapper.selectOne(
+                        new LambdaQueryWrapper<ShopOrderItem>()
+                                .eq(ShopOrderItem::getOrderId, orderId)
+                                .last("LIMIT 1"));
         if (item == null) throw new IllegalArgumentException("订单明细不存在");
         ShopItemReview review = new ShopItemReview();
         review.setOrderId(orderId);

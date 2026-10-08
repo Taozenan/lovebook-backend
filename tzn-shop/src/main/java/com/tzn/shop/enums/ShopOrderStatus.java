@@ -1,7 +1,9 @@
 package com.tzn.shop.enums;
 
 public enum ShopOrderStatus {
-    WAIT_ACCEPT(1, "待接单"), ACCEPTED(2, "已接待"), COMPLETED(3, "已完成");
+    WAIT_ACCEPT(1, "待接单"),
+    ACCEPTED(2, "已接待"),
+    COMPLETED(3, "已完成");
     private final int code;
     private final String description;
 

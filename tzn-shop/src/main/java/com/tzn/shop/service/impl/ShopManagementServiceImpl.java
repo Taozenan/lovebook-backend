@@ -12,6 +12,8 @@ import com.tzn.shop.enums.ShopItemStatus;
 import com.tzn.shop.enums.ShopItemType;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopManagementService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,9 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 @Service
 public class ShopManagementServiceImpl implements ShopManagementService {
     private final ShopItemMapper itemMapper;
@@ -31,7 +30,11 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     private final ShopOrderMapper orderMapper;
     private final CurrentUserService currentUserService;
 
-    public ShopManagementServiceImpl(ShopItemMapper itemMapper, ShopItemImageMapper imageMapper, ShopOrderMapper orderMapper, CurrentUserService currentUserService) {
+    public ShopManagementServiceImpl(
+            ShopItemMapper itemMapper,
+            ShopItemImageMapper imageMapper,
+            ShopOrderMapper orderMapper,
+            CurrentUserService currentUserService) {
         this.itemMapper = itemMapper;
         this.imageMapper = imageMapper;
         this.orderMapper = orderMapper;
@@ -41,7 +44,12 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     @Override
     public Map<String, Object> overview(String authorization, Integer itemType, Integer status) {
         long uid = currentUserService.requireUserId(authorization);
-        LambdaQueryWrapper<ShopItem> w = new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getSellerUserId, uid).eq(ShopItem::getDelFlag, 0).orderByDesc(ShopItem::getUpdateTime).orderByDesc(ShopItem::getId);
+        LambdaQueryWrapper<ShopItem> w =
+                new LambdaQueryWrapper<ShopItem>()
+                        .eq(ShopItem::getSellerUserId, uid)
+                        .eq(ShopItem::getDelFlag, 0)
+                        .orderByDesc(ShopItem::getUpdateTime)
+                        .orderByDesc(ShopItem::getId);
         if (itemType != null) {
             ShopItemType.fromCode(itemType);
             w.eq(ShopItem::getItemType, itemType);
@@ -55,8 +63,25 @@ public class ShopManagementServiceImpl implements ShopManagementService {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("items", items);
         r.put("publishedCount", count(uid, ShopItemStatus.ON_SHELF.getCode()));
-        r.put("pendingOrderCount", orderMapper.selectCount(new LambdaQueryWrapper<ShopOrder>().eq(ShopOrder::getSellerUserId, uid).in(ShopOrder::getStatus, List.of(1, 2)).eq(ShopOrder::getDelFlag, 0)));
-        BigDecimal income = orderMapper.selectList(new LambdaQueryWrapper<ShopOrder>().eq(ShopOrder::getSellerUserId, uid).eq(ShopOrder::getStatus, 3).eq(ShopOrder::getDelFlag, 0).ge(ShopOrder::getCreateTime, LocalDate.now().atStartOfDay())).stream().map(ShopOrder::getTotalAmount).filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        r.put(
+                "pendingOrderCount",
+                orderMapper.selectCount(
+                        new LambdaQueryWrapper<ShopOrder>()
+                                .eq(ShopOrder::getSellerUserId, uid)
+                                .in(ShopOrder::getStatus, List.of(1, 2))
+                                .eq(ShopOrder::getDelFlag, 0)));
+        BigDecimal income =
+                orderMapper
+                        .selectList(
+                                new LambdaQueryWrapper<ShopOrder>()
+                                        .eq(ShopOrder::getSellerUserId, uid)
+                                        .eq(ShopOrder::getStatus, 3)
+                                        .eq(ShopOrder::getDelFlag, 0)
+                                        .ge(ShopOrder::getCreateTime, LocalDate.now().atStartOfDay()))
+                        .stream()
+                        .map(ShopOrder::getTotalAmount)
+                        .filter(java.util.Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
         r.put("todayIncome", income);
         return r;
     }
@@ -80,7 +105,12 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     public Map<String, Object> update(String authorization, long itemId, ShopItemRequest request) {
         long uid = currentUserService.requireUserId(authorization);
         validate(request);
-        ShopItem i = itemMapper.selectOne(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getId, itemId).eq(ShopItem::getSellerUserId, uid).eq(ShopItem::getDelFlag, 0));
+        ShopItem i =
+                itemMapper.selectOne(
+                        new LambdaQueryWrapper<ShopItem>()
+                                .eq(ShopItem::getId, itemId)
+                                .eq(ShopItem::getSellerUserId, uid)
+                                .eq(ShopItem::getDelFlag, 0));
         if (i == null) throw new IllegalArgumentException("商品不存在或无权修改");
         int st = request.status() == null ? 0 : request.status();
         ShopItemStatus.fromCode(st);
@@ -94,7 +124,12 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     public void changeStatus(String authorization, long itemId, Integer status) {
         long uid = currentUserService.requireUserId(authorization);
         ShopItemStatus.fromCode(status);
-        ShopItem i = itemMapper.selectOne(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getId, itemId).eq(ShopItem::getSellerUserId, uid).eq(ShopItem::getDelFlag, 0));
+        ShopItem i =
+                itemMapper.selectOne(
+                        new LambdaQueryWrapper<ShopItem>()
+                                .eq(ShopItem::getId, itemId)
+                                .eq(ShopItem::getSellerUserId, uid)
+                                .eq(ShopItem::getDelFlag, 0));
         if (i == null) throw new IllegalArgumentException("商品不存在或无权操作");
         i.setStatus(status);
         i.setUpdateUser(uid);
@@ -107,7 +142,12 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     @Override
     public void delete(String authorization, long itemId) {
         long uid = currentUserService.requireUserId(authorization);
-        ShopItem i = itemMapper.selectOne(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getId, itemId).eq(ShopItem::getSellerUserId, uid).eq(ShopItem::getDelFlag, 0));
+        ShopItem i =
+                itemMapper.selectOne(
+                        new LambdaQueryWrapper<ShopItem>()
+                                .eq(ShopItem::getId, itemId)
+                                .eq(ShopItem::getSellerUserId, uid)
+                                .eq(ShopItem::getDelFlag, 0));
         if (i == null) throw new IllegalArgumentException("商品不存在或无权删除");
         i.setDelFlag(1);
         i.setUpdateUser(uid);
@@ -120,7 +160,13 @@ public class ShopManagementServiceImpl implements ShopManagementService {
         long uid = currentUserService.requireUserId(authorization);
         if (recommended == null || (recommended != 0 && recommended != 1))
             throw new IllegalArgumentException("推荐状态只能是0或1");
-        ShopItem i = itemMapper.selectOne(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getId, itemId).eq(ShopItem::getSellerUserId, uid).in(ShopItem::getItemType, List.of(1, 2)).eq(ShopItem::getDelFlag, 0));
+        ShopItem i =
+                itemMapper.selectOne(
+                        new LambdaQueryWrapper<ShopItem>()
+                                .eq(ShopItem::getId, itemId)
+                                .eq(ShopItem::getSellerUserId, uid)
+                                .in(ShopItem::getItemType, List.of(1, 2))
+                                .eq(ShopItem::getDelFlag, 0));
         if (i == null) throw new IllegalArgumentException("商品不存在或无权操作");
         i.setIsRecommended(recommended);
         i.setUpdateUser(uid);
@@ -150,12 +196,17 @@ public class ShopManagementServiceImpl implements ShopManagementService {
 
     private void saveImages(Long id, long uid, List<String> urls) {
         if (urls == null) return;
-        List<ShopItemImage> old = imageMapper.selectList(new LambdaQueryWrapper<ShopItemImage>().eq(ShopItemImage::getItemId, id).eq(ShopItemImage::getDelFlag, 0));
-        old.forEach(x -> {
-            x.setDelFlag(1);
-            x.setUpdateUser(uid);
-            x.setUpdateTime(LocalDateTime.now());
-            imageMapper.updateById(x);
+        List<ShopItemImage> old =
+                imageMapper.selectList(
+                        new LambdaQueryWrapper<ShopItemImage>()
+                                .eq(ShopItemImage::getItemId, id)
+                                .eq(ShopItemImage::getDelFlag, 0));
+        old.forEach(
+                x -> {
+                    x.setDelFlag(1);
+                    x.setUpdateUser(uid);
+                    x.setUpdateTime(LocalDateTime.now());
+                    imageMapper.updateById(x);
         });
         for (int n = 0; n < urls.size(); n++) {
             String u = urls.get(n);
@@ -175,12 +226,22 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     }
 
     private int count(long uid, int st) {
-        return itemMapper.selectCount(new LambdaQueryWrapper<ShopItem>().eq(ShopItem::getSellerUserId, uid).eq(ShopItem::getStatus, st).eq(ShopItem::getDelFlag, 0)).intValue();
+        return itemMapper
+                .selectCount(
+                        new LambdaQueryWrapper<ShopItem>()
+                                .eq(ShopItem::getSellerUserId, uid)
+                                .eq(ShopItem::getStatus, st)
+                                .eq(ShopItem::getDelFlag, 0))
+                .intValue();
     }
 
     private void validate(ShopItemRequest r) {
-        if (r == null || r.itemType() == null || r.title() == null || r.title().isBlank() || r.price() == null || r.stock() == null)
-            throw new IllegalArgumentException("商品类型、名称、价格和库存不能为空");
+        if (r == null
+                || r.itemType() == null
+                || r.title() == null
+                || r.title().isBlank()
+                || r.price() == null
+                || r.stock() == null) throw new IllegalArgumentException("商品类型、名称、价格和库存不能为空");
         ShopItemType.fromCode(r.itemType());
         if (r.price().signum() < 0 || r.stock() < 0) throw new IllegalArgumentException("价格和库存不能为负数");
     }

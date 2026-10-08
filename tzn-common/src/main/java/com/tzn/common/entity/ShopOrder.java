@@ -1,6 +1,9 @@
 package com.tzn.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,44 +12,65 @@ import java.time.LocalDateTime;
 public class ShopOrder {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("order_no")
     private String orderNo;
+
     @TableField("buyer_user_id")
     private Long buyerUserId;
+
     @TableField("seller_user_id")
     private Long sellerUserId;
+
     @TableField("total_amount")
     private BigDecimal totalAmount;
+
     private Integer status;
+
     @TableField("is_reviewed")
     private Integer isReviewed;
+
     @TableField("payment_status")
     private Integer paymentStatus;
+
     @TableField("payment_method")
     private Integer paymentMethod;
+
     @TableField("paid_amount")
     private BigDecimal paidAmount;
+
     @TableField("paid_time")
     private LocalDateTime paidTime;
+
     @TableField("seller_confirm_time")
     private LocalDateTime sellerConfirmTime;
+
     @TableField("buyer_confirm_time")
     private LocalDateTime buyerConfirmTime;
+
     @TableField("completed_time")
     private LocalDateTime completedTime;
+
     @TableField("appointment_time")
     private LocalDateTime appointmentTime;
+
     private String remark;
+
     @TableField("del_flag")
     private Integer delFlag;
+
     @TableField("create_user")
     private Long createUser;
+
     @TableField("update_user")
     private Long updateUser;
+
     @TableField("create_time")
     private LocalDateTime createTime;
+
     @TableField("update_time")
     private LocalDateTime updateTime;
+
     @TableField("version")
     private Integer version;
 

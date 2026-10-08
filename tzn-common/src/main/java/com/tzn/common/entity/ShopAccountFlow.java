@@ -1,6 +1,9 @@
 package com.tzn.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,24 +12,35 @@ import java.time.LocalDateTime;
 public class ShopAccountFlow {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("user_id")
     private Long userId;
+
     @TableField("order_id")
     private Long orderId;
+
     @TableField("order_no")
     private String orderNo;
+
     @TableField("flow_type")
     private Integer flowType;
+
     private BigDecimal amount;
+
     @TableField("balance_before")
     private BigDecimal balanceBefore;
+
     @TableField("balance_after")
     private BigDecimal balanceAfter;
+
     private String remark;
+
     @TableField("create_user")
     private Long createUser;
+
     @TableField("update_user")
     private Long updateUser;
+
     @TableField("create_time")
     private LocalDateTime createTime;
 

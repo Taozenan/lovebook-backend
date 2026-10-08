@@ -4,20 +4,24 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-
 import java.time.LocalDateTime;
 
 @TableName("couple_binding")
 public class CoupleBinding {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("requester_user_id")
     private Long requesterUserId;
+
     @TableField("target_user_id")
     private Long targetUserId;
+
     private String status;
+
     @TableField("create_time")
     private LocalDateTime createTime;
+
     @TableField("update_time")
     private LocalDateTime updateTime;
 

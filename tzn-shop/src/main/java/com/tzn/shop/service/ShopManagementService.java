@@ -1,7 +1,6 @@
 package com.tzn.shop.service;
 
 import com.tzn.shop.dto.ShopItemRequest;
-
 import java.util.Map;
 
 public interface ShopManagementService {

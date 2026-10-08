@@ -1,6 +1,9 @@
 package com.tzn.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,40 +12,58 @@ import java.time.LocalDateTime;
 public class ShopItem {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("category_id")
     private Long categoryId;
+
     @TableField("item_type")
     private Integer itemType;
+
     private String title, subtitle, description;
     private BigDecimal price;
     private Integer stock;
+
     @TableField("cover_url")
     private String coverUrl;
+
     @TableField("seller_user_id")
     private Long sellerUserId;
+
     @TableField("service_duration_min")
     private Integer serviceDurationMin;
+
     @TableField("service_rule")
     private String serviceRule;
+
     @TableField("is_recommended")
     private Integer isRecommended;
+
     private Integer status;
+
     @TableField("sort_no")
     private Integer sortNo;
+
     @TableField("del_flag")
     private Integer delFlag;
+
     @TableField("create_user")
     private Long createUser;
+
     @TableField("update_user")
     private Long updateUser;
+
     @TableField("create_time")
     private LocalDateTime createTime;
+
     @TableField("update_time")
     private LocalDateTime updateTime;
+
     @TableField("publish_time")
     private LocalDateTime publishTime;
+
     @TableField("off_shelf_time")
     private LocalDateTime offShelfTime;
+
     @TableField("off_shelf_reason")
     private String offShelfReason;
 

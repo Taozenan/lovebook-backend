@@ -1,7 +1,9 @@
 package com.tzn.shop.enums;
 
 public enum ShopItemStatus {
-    DRAFT(0), ON_SHELF(1), OFF_SHELF(2);
+    DRAFT(0),
+    ON_SHELF(1),
+    OFF_SHELF(2);
     private final int code;
 
     ShopItemStatus(int code) {

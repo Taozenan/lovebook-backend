@@ -3,6 +3,14 @@ package com.tzn.shop.controller;
 import com.tzn.common.api.ApiResponse;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopCosStorageService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,22 +20,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
 @RestController
 @RequestMapping("/api/shop")
 public class ShopUploadController {
@@ -35,21 +27,24 @@ public class ShopUploadController {
     private final ShopCosStorageService cosStorageService;
     private final Path uploadRoot;
 
-    public ShopUploadController(CurrentUserService currentUserService,
-                                ShopCosStorageService cosStorageService,
-                                @Value("${shop.upload-dir:uploads}") String uploadDir) {
+    public ShopUploadController(
+            CurrentUserService currentUserService,
+            ShopCosStorageService cosStorageService,
+            @Value("${shop.upload-dir:uploads}") String uploadDir) {
         this.currentUserService = currentUserService;
         this.cosStorageService = cosStorageService;
         this.uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<Map<String, String>> upload(@RequestHeader("Authorization") String authorization,
-                                                   @RequestPart("file") MultipartFile file) {
+    public ApiResponse<Map<String, String>> upload(
+            @RequestHeader("Authorization") String authorization,
+            @RequestPart("file") MultipartFile file) {
         long userId = currentUserService.requireUserId(authorization);
         if (cosStorageService.isEnabled()) {
             String url = cosStorageService.upload(userId, file);
-            return ApiResponse.success(Map.of("url", url, "filename", url.substring(url.indexOf("key=") + 4)));
+            return ApiResponse.success(
+                    Map.of("url", url, "filename", url.substring(url.indexOf("key=") + 4)));
         }
         return uploadLocal(userId, file);
     }
@@ -61,12 +56,19 @@ public class ShopUploadController {
             return ResponseEntity.notFound().build();
         }
         String contentType = cosStorageService.contentType(key);
-        MediaType mediaType = contentType == null ? MediaType.APPLICATION_OCTET_STREAM : MediaType.parseMediaType(contentType);
-        return ResponseEntity.ok().contentType(mediaType).header(HttpHeaders.CONTENT_DISPOSITION, "inline").body(resource);
+        MediaType mediaType =
+                contentType == null
+                        ? MediaType.APPLICATION_OCTET_STREAM
+                        : MediaType.parseMediaType(contentType);
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .body(resource);
     }
 
     @GetMapping("/upload/{filename:.+}")
-    public ResponseEntity<Resource> downloadLocal(@PathVariable("filename") String filename) throws IOException {
+    public ResponseEntity<Resource> downloadLocal(@PathVariable("filename") String filename)
+            throws IOException {
         if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
             return ResponseEntity.badRequest().build();
         }
@@ -76,8 +78,14 @@ public class ShopUploadController {
         }
         Resource resource = new UrlResource(file.toUri());
         String contentType = Files.probeContentType(file);
-        MediaType mediaType = contentType == null ? MediaType.APPLICATION_OCTET_STREAM : MediaType.parseMediaType(contentType);
-        return ResponseEntity.ok().contentType(mediaType).header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"").body(resource);
+        MediaType mediaType =
+                contentType == null
+                        ? MediaType.APPLICATION_OCTET_STREAM
+                        : MediaType.parseMediaType(contentType);
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(resource);
     }
 
     private ApiResponse<Map<String, String>> uploadLocal(long userId, MultipartFile file) {
@@ -102,7 +110,8 @@ public class ShopUploadController {
         if (file.getSize() > 5 * 1024 * 1024) {
             throw new IllegalArgumentException("图片不能超过5MB");
         }
-        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        String contentType =
+                file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
         if (!contentType.startsWith("image/")) {
             throw new IllegalArgumentException("只能上传图片文件");
         }
@@ -110,7 +119,8 @@ public class ShopUploadController {
 
     private String extension(String originalFilename, String contentType) {
         if (originalFilename != null && originalFilename.lastIndexOf('.') >= 0) {
-            String extension = originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+            String extension =
+                    originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase(Locale.ROOT);
             if (extension.matches("\\.(jpg|jpeg|png|gif|webp|bmp)")) {
                 return extension;
             }

@@ -1,6 +1,9 @@
 package com.tzn.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.LocalDateTime;
 
@@ -8,18 +11,26 @@ import java.time.LocalDateTime;
 public class ShopBanner {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     private String title;
+
     @TableField("image_url")
     private String imageUrl;
+
     @TableField("link_item_id")
     private Long linkItemId;
+
     @TableField("sort_no")
     private Integer sortNo;
+
     private Integer status;
+
     @TableField("start_time")
     private LocalDateTime startTime;
+
     @TableField("end_time")
     private LocalDateTime endTime;
+
     @TableField("del_flag")
     private Integer delFlag;
 

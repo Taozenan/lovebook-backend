@@ -1,6 +1,9 @@
 package com.tzn.common.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,24 +12,34 @@ import java.time.LocalDateTime;
 public class ShopOrderItem {
     @TableId(type = IdType.AUTO)
     private Long id;
+
     @TableField("order_id")
     private Long orderId;
+
     @TableField("item_id")
     private Long itemId;
+
     @TableField("item_title")
     private String itemTitle;
+
     @TableField("item_type")
     private Integer itemType;
+
     @TableField("unit_price")
     private BigDecimal unitPrice;
+
     private Integer quantity;
     private BigDecimal subtotal;
+
     @TableField("cover_url")
     private String coverUrl;
+
     @TableField("service_duration_min")
     private Integer serviceDurationMin;
+
     @TableField("service_rule")
     private String serviceRule;
+
     @TableField("create_time")
     private LocalDateTime createTime;
 
