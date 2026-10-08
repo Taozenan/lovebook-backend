@@ -3,11 +3,48 @@ package com.tzn.auth.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public record RegisterRequest(
-        @NotBlank(message = "请输入手机号") @Pattern(regexp = "^1\\d{10}$", message = "请输入正确的手机号")
-        String phone,
-        @NotBlank(message = "请输入昵称") @Size(max = 32, message = "昵称不能超过 32 个字符") String nickname,
-        @NotBlank(message = "请输入密码") @Size(min = 6, max = 64, message = "密码长度需为 6 到 64 位")
-        String password) {
+/**
+ * 注册请求。
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class RegisterRequest {
+  /** 手机号。 */
+  @NotBlank
+  @Pattern(regexp = "^1\\d{10}$")
+  /** 手机号。 */
+  private String phone;
+
+  /**
+   * 用户昵称。
+   */
+  @NotBlank
+  @Size(max = 32)
+  /** 用户昵称。 */
+  private String nickname;
+
+  /**
+   * 登录密码。
+   */
+  @NotBlank
+  @Size(min = 6, max = 64)
+  /** 登录密码。 */
+  private String password;
+
+  public String phone() {
+    return phone;
+  }
+
+  public String nickname() {
+    return nickname;
+  }
+
+  public String password() {
+    return password;
+  }
 }

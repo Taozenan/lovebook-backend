@@ -8,13 +8,16 @@ import com.tzn.shop.dto.ShopOrderCreateRequest;
 import com.tzn.shop.enums.ShopOrderStatus;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopOrderService;
+import com.tzn.shop.vo.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ShopOrderServiceImpl implements ShopOrderService {
@@ -54,7 +57,7 @@ public class ShopOrderServiceImpl implements ShopOrderService {
   }
 
   @Override
-  public Map<String, Object> account(String auth) {
+  public ShopAccountVo account(String auth) {
     long uid = current.requireUserId(auth);
     ensureAccount(uid);
     ShopUserAccount a =
@@ -62,12 +65,12 @@ public class ShopOrderServiceImpl implements ShopOrderService {
                     new LambdaQueryWrapper<ShopUserAccount>()
                             .eq(ShopUserAccount::getUserId, uid)
                             .eq(ShopUserAccount::getDelFlag, 0));
-    return Map.of("balance", a.getBalance(), "frozenAmount", a.getFrozenAmount());
+      return new ShopAccountVo(a.getBalance(), a.getFrozenAmount());
   }
 
   @Override
   @Transactional
-  public Map<String, Object> create(String auth, ShopOrderCreateRequest req) {
+  public ShopOrderCreatedVo create(String auth, ShopOrderCreateRequest req) {
     long buyer = current.requireUserId(auth);
     if (req == null || req.itemId() == null || req.quantity() == null || req.quantity() < 1)
       throw new IllegalArgumentException("商品和购买数量不能为空");
@@ -150,30 +153,20 @@ public class ShopOrderServiceImpl implements ShopOrderService {
     flow.setCreateTime(LocalDateTime.now());
     flowMapper.insert(flow);
     addTrack(o.getId(), 1, "已下单", "订单已支付，等待对方接单", buyer);
-    return Map.of(
-            "id",
-            o.getId(),
-            "orderNo",
-            no,
-            "status",
-            1,
-            "totalAmount",
-            total,
-            "remainingBalance",
-            a.getBalance());
+      return new ShopOrderCreatedVo(o.getId(), no, 1, total, a.getBalance());
   }
 
   @Override
-  public Map<String, Object> buyerList(String auth, Integer status, int pn, int ps) {
+  public ShopOrderVoPage buyerList(String auth, Integer status, int pn, int ps) {
     return page(current.requireUserId(auth), true, status, pn, ps);
   }
 
   @Override
-  public Map<String, Object> sellerList(String auth, Integer status, int pn, int ps) {
+  public ShopOrderVoPage sellerList(String auth, Integer status, int pn, int ps) {
     return page(current.requireUserId(auth), false, status, pn, ps);
   }
 
-  private Map<String, Object> page(long uid, boolean buyer, Integer status, int pn, int ps) {
+    private ShopOrderVoPage page(long uid, boolean buyer, Integer status, int pn, int ps) {
     if (pn < 1 || ps < 1 || ps > 100) throw new IllegalArgumentException("分页参数不合法");
     LambdaQueryWrapper<ShopOrder> w =
             new LambdaQueryWrapper<ShopOrder>()
@@ -193,7 +186,7 @@ public class ShopOrderServiceImpl implements ShopOrderService {
     int from = Math.min((pn - 1) * ps, all.size());
     int to = Math.min(from + ps, all.size());
     List<ShopOrder> os = all.subList(from, to);
-    List<Map<String, Object>> rows = new ArrayList<>();
+        List<ShopOrderSummaryVo> rows = new ArrayList<>();
     for (ShopOrder o : os) {
       ShopOrderItem i =
               orderItemMapper.selectOne(
@@ -201,29 +194,28 @@ public class ShopOrderServiceImpl implements ShopOrderService {
                               .eq(ShopOrderItem::getOrderId, o.getId())
                               .last("LIMIT 1"));
       SysUser b = userMapper.selectById(o.getBuyerUserId());
-      Map<String, Object> m = new LinkedHashMap<>();
-      m.put("id", o.getId());
-      m.put("orderNo", o.getOrderNo());
-      m.put("totalAmount", o.getTotalAmount());
-      m.put("status", o.getStatus());
-      m.put("isReviewed", o.getIsReviewed());
-      m.put("reviewed", o.getIsReviewed());
-      m.put("canReview", buyer && o.getStatus() == 3 && o.getIsReviewed() == 0);
-      m.put("createTime", o.getCreateTime());
-      m.put("itemTitle", i == null ? null : i.getItemTitle());
-      m.put("itemType", i == null ? null : i.getItemType());
-      m.put("quantity", i == null ? null : i.getQuantity());
-      m.put("coverUrl", i == null ? null : i.getCoverUrl());
-      m.put("buyerName", b == null ? null : b.getNickname());
-      m.put("buyerAvatarUrl", b == null ? null : b.getAvatarUrl());
-      rows.add(m);
+        rows.add(
+                new ShopOrderSummaryVo(
+                        o.getId(),
+                        o.getOrderNo(),
+                        o.getTotalAmount(),
+                        o.getStatus(),
+                        o.getIsReviewed(),
+                        o.getIsReviewed(),
+                        buyer && o.getStatus() == 3 && o.getIsReviewed() == 0,
+                        o.getCreateTime(),
+                        i == null ? null : i.getItemTitle(),
+                        i == null ? null : i.getItemType(),
+                        i == null ? null : i.getQuantity(),
+                        i == null ? null : i.getCoverUrl(),
+                        b == null ? null : b.getNickname(),
+                        b == null ? null : b.getAvatarUrl()));
     }
-    return Map.of(
-            "items", rows, "total", orderMapper.selectCount(w), "pageNum", pn, "pageSize", ps);
+        return new ShopOrderVoPage(rows, orderMapper.selectCount(w), pn, ps);
   }
 
   @Override
-  public Map<String, Object> detail(String auth, long id) {
+  public ShopOrderDetailVo detail(String auth, long id) {
     long uid = current.requireUserId(auth);
     ShopOrder o =
             orderMapper.selectOne(
@@ -236,51 +228,51 @@ public class ShopOrderServiceImpl implements ShopOrderService {
                                                     .or()
                                                     .eq(ShopOrder::getSellerUserId, uid)));
     if (o == null) throw new IllegalArgumentException("订单不存在或无权查看");
-    Map<String, Object> r = new LinkedHashMap<>();
-    Map<String, Object> om = new LinkedHashMap<>();
-    om.put("id", o.getId());
-    om.put("orderNo", o.getOrderNo());
-    om.put("buyerUserId", o.getBuyerUserId());
-    om.put("sellerUserId", o.getSellerUserId());
-    om.put("totalAmount", o.getTotalAmount());
-    om.put("status", o.getStatus());
-    om.put("isReviewed", o.getIsReviewed());
-    om.put("paymentStatus", o.getPaymentStatus());
-    om.put("paymentMethod", o.getPaymentMethod());
-    om.put("paidAmount", o.getPaidAmount());
-    om.put("paidTime", o.getPaidTime());
-    om.put("appointmentTime", o.getAppointmentTime());
-    om.put("remark", o.getRemark());
-    om.put("createTime", o.getCreateTime());
     SysUser bu = userMapper.selectById(o.getBuyerUserId()),
             su = userMapper.selectById(o.getSellerUserId());
-    om.put("buyerName", bu == null ? null : bu.getNickname());
-    om.put("sellerName", su == null ? null : su.getNickname());
-    r.put("order", om);
-    r.put("canAccept", uid == o.getSellerUserId() && o.getStatus() == 1);
-    r.put("canComplete", uid == o.getBuyerUserId() && o.getStatus() == 2);
-    r.put("reviewed", o.getIsReviewed() == 1);
-    r.put("canReview", uid == o.getBuyerUserId() && o.getStatus() == 3 && o.getIsReviewed() == 0);
+      ShopOrderVo order =
+              new ShopOrderVo(
+                      o.getId(),
+                      o.getOrderNo(),
+                      o.getBuyerUserId(),
+                      o.getSellerUserId(),
+                      o.getTotalAmount(),
+                      o.getStatus(),
+                      o.getIsReviewed(),
+                      o.getPaymentStatus(),
+                      o.getPaymentMethod(),
+                      o.getPaidAmount(),
+                      o.getPaidTime(),
+                      o.getAppointmentTime(),
+                      o.getRemark(),
+                      o.getCreateTime(),
+                      bu == null ? null : bu.getNickname(),
+                      su == null ? null : su.getNickname());
     ShopOrderItem i =
             orderItemMapper.selectOne(
                     new LambdaQueryWrapper<ShopOrderItem>()
                             .eq(ShopOrderItem::getOrderId, id)
                             .last("LIMIT 1"));
-    r.put("items", i == null ? List.of() : List.of(i));
-    r.put(
-            "review",
-            reviewMapper.selectList(
-                    new LambdaQueryWrapper<ShopItemReview>()
-                            .eq(ShopItemReview::getOrderId, id)
-                            .eq(ShopItemReview::getDelFlag, 0)));
-    r.put(
-            "tracks",
-            trackMapper.selectList(
-                    new LambdaQueryWrapper<ShopOrderTrack>()
-                            .eq(ShopOrderTrack::getOrderId, id)
-                            .orderByAsc(ShopOrderTrack::getCreateTime)
-                            .orderByAsc(ShopOrderTrack::getId)));
-    return r;
+      List<ShopItemReview> review =
+              reviewMapper.selectList(
+                      new LambdaQueryWrapper<ShopItemReview>()
+                              .eq(ShopItemReview::getOrderId, id)
+                              .eq(ShopItemReview::getDelFlag, 0));
+      List<ShopOrderTrack> tracks =
+              trackMapper.selectList(
+                      new LambdaQueryWrapper<ShopOrderTrack>()
+                              .eq(ShopOrderTrack::getOrderId, id)
+                              .orderByAsc(ShopOrderTrack::getCreateTime)
+                              .orderByAsc(ShopOrderTrack::getId));
+      return new ShopOrderDetailVo(
+              order,
+              uid == o.getSellerUserId() && o.getStatus() == 1,
+              uid == o.getBuyerUserId() && o.getStatus() == 2,
+              o.getIsReviewed() == 1,
+              uid == o.getBuyerUserId() && o.getStatus() == 3 && o.getIsReviewed() == 0,
+              i == null ? List.of() : List.of(i),
+              review,
+              tracks);
   }
 
   @Override

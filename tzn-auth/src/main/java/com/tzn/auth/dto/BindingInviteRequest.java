@@ -1,6 +1,20 @@
 package com.tzn.auth.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public record BindingInviteRequest(@NotBlank(message = "请输入对方手机号") String targetPhone) {
+/**
+ * 绑定邀请请求。
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class BindingInviteRequest {
+  /** 目标用户手机号。 */
+  private String targetPhone;
+
+  public String targetPhone() {
+    return targetPhone;
+  }
 }

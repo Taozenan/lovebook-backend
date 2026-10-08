@@ -2,11 +2,11 @@ package com.tzn.auth.service;
 
 import com.tzn.auth.dto.AvatarUpdateRequest;
 import com.tzn.auth.dto.LoginRequest;
-import java.util.Map;
+import com.tzn.auth.vo.LoginVo;
 
 public interface AuthService {
 
-    Map<String, Object> login(LoginRequest request);
+    LoginVo login(LoginRequest request);
 
     void register(String phone, String nickname, String password);
 

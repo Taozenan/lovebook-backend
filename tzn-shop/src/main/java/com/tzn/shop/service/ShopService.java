@@ -1,13 +1,13 @@
 package com.tzn.shop.service;
 
-import java.util.Map;
+import com.tzn.shop.vo.ShopHomeVo;
 
 public interface ShopService {
 
-  Map<String, Object> home(String authorization);
+    ShopHomeVo home(String authorization);
 
-  Map<String, Object> list(
-          String authorization, Integer itemType, String keyword, Long categoryId, Boolean recommended);
+    ShopItemVoList list(
+            String authorization, Integer itemType, String keyword, Long categoryId, Boolean recommended);
 
-  Map<String, Object> detail(long itemId);
+    ShopItemVoDetail detail(long itemId);
 }

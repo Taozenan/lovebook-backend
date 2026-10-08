@@ -3,9 +3,8 @@ package com.tzn.shop.controller;
 import com.tzn.common.api.ApiResponse;
 import com.tzn.shop.dto.ShopReviewCreateRequest;
 import com.tzn.shop.service.ShopReviewService;
+import com.tzn.shop.vo.ShopReviewCreatedVo;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/shop/orders")
@@ -17,7 +16,7 @@ public class ShopReviewController {
   }
 
   @PostMapping("/{id}/review")
-  public ApiResponse<Map<String, Object>> create(
+  public ApiResponse<ShopReviewCreatedVo> create(
           @RequestHeader("Authorization") String authorization,
           @PathVariable("id") long id,
           @RequestBody ShopReviewCreateRequest request) {

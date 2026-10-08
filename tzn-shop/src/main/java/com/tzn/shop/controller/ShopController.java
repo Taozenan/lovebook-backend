@@ -2,9 +2,8 @@ package com.tzn.shop.controller;
 
 import com.tzn.common.api.ApiResponse;
 import com.tzn.shop.service.ShopService;
+import com.tzn.shop.vo.ShopHomeVo;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/shop")
@@ -17,13 +16,12 @@ public class ShopController {
   }
 
   @GetMapping("/home")
-  public ApiResponse<Map<String, Object>> home(
-          @RequestHeader("Authorization") String authorization) {
+  public ApiResponse<ShopHomeVo> home(@RequestHeader("Authorization") String authorization) {
     return ApiResponse.success(shopService.home(authorization));
   }
 
   @GetMapping("/items")
-  public ApiResponse<Map<String, Object>> list(
+  public ApiResponse<ShopItemVoList> list(
           @RequestHeader("Authorization") String authorization,
           @RequestParam(name = "type", required = false) Integer type,
           @RequestParam(name = "keyword", required = false) String keyword,
@@ -34,7 +32,7 @@ public class ShopController {
   }
 
   @GetMapping("/items/{id}")
-  public ApiResponse<Map<String, Object>> detail(@PathVariable("id") long id) {
+  public ApiResponse<ShopItemVoDetail> detail(@PathVariable("id") long id) {
     return ApiResponse.success(shopService.detail(id));
   }
 }

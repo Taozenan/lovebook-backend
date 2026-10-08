@@ -1,14 +1,15 @@
 package com.tzn.shop.service;
 
 import com.tzn.shop.dto.ShopItemRequest;
-import java.util.Map;
+import com.tzn.shop.vo.ShopIdVo;
+import com.tzn.shop.vo.ShopManagementOverviewVo;
 
 public interface ShopManagementService {
-    Map<String, Object> overview(String authorization, Integer itemType, Integer status);
+    ShopManagementOverviewVo overview(String authorization, Integer itemType, Integer status);
 
-    Map<String, Object> create(String authorization, ShopItemRequest request);
+    ShopIdVo create(String authorization, ShopItemRequest request);
 
-    Map<String, Object> update(String authorization, long itemId, ShopItemRequest request);
+    ShopIdVo update(String authorization, long itemId, ShopItemRequest request);
 
     void changeStatus(String authorization, long itemId, Integer status);
 

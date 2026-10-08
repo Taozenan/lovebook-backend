@@ -1,18 +1,20 @@
 package com.tzn.shop.service;
 
 import com.tzn.shop.dto.ShopOrderCreateRequest;
-import java.util.Map;
+import com.tzn.shop.vo.ShopAccountVo;
+import com.tzn.shop.vo.ShopOrderCreatedVo;
+import com.tzn.shop.vo.ShopOrderDetailVo;
 
 public interface ShopOrderService {
-  Map<String, Object> account(String authorization);
+    ShopAccountVo account(String authorization);
 
-  Map<String, Object> create(String authorization, ShopOrderCreateRequest request);
+    ShopOrderCreatedVo create(String authorization, ShopOrderCreateRequest request);
 
-  Map<String, Object> buyerList(String authorization, Integer status, int pageNum, int pageSize);
+    ShopOrderVoPage buyerList(String authorization, Integer status, int pageNum, int pageSize);
 
-  Map<String, Object> sellerList(String authorization, Integer status, int pageNum, int pageSize);
+    ShopOrderVoPage sellerList(String authorization, Integer status, int pageNum, int pageSize);
 
-  Map<String, Object> detail(String authorization, long orderId);
+    ShopOrderDetailVo detail(String authorization, long orderId);
 
   void accept(String authorization, long orderId);
 

@@ -1,15 +1,16 @@
 package com.tzn.auth.service;
 
 import com.tzn.auth.dto.BindingInviteRequest;
-import java.util.Map;
+import com.tzn.auth.vo.BindingInvitationVo;
+import com.tzn.auth.vo.BindingStatusVo;
 
 public interface BindingService {
 
-  Map<String, Object> sendInvite(String authorization, BindingInviteRequest request);
+  BindingInvitationVo sendInvite(String authorization, BindingInviteRequest request);
 
-  Map<String, Object> status(String authorization);
+  BindingStatusVo status(String authorization);
 
-  Map<String, Object> accept(String authorization, long invitationId);
+  BindingStatusVo accept(String authorization, long invitationId);
 
   void reject(String authorization, long invitationId);
 

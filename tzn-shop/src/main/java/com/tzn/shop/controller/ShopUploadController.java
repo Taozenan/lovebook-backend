@@ -3,6 +3,7 @@ package com.tzn.shop.controller;
 import com.tzn.common.api.ApiResponse;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopCosStorageService;
+import com.tzn.shop.vo.ShopUploadVo;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -17,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -37,14 +37,13 @@ public class ShopUploadController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<Map<String, String>> upload(
+    public ApiResponse<ShopUploadVo> upload(
             @RequestHeader("Authorization") String authorization,
             @RequestPart("file") MultipartFile file) {
         long userId = currentUserService.requireUserId(authorization);
         if (cosStorageService.isEnabled()) {
             String url = cosStorageService.upload(userId, file);
-            return ApiResponse.success(
-                    Map.of("url", url, "filename", url.substring(url.indexOf("key=") + 4)));
+            return ApiResponse.success(new ShopUploadVo(url, url.substring(url.indexOf("key=") + 4)));
         }
         return uploadLocal(userId, file);
     }
@@ -88,7 +87,7 @@ public class ShopUploadController {
                 .body(resource);
     }
 
-    private ApiResponse<Map<String, String>> uploadLocal(long userId, MultipartFile file) {
+    private ApiResponse<ShopUploadVo> uploadLocal(long userId, MultipartFile file) {
         validate(file);
         String extension = extension(file.getOriginalFilename(), file.getContentType());
         String filename = userId + "_" + UUID.randomUUID().toString().replace("-", "") + extension;
@@ -100,7 +99,7 @@ public class ShopUploadController {
         } catch (IOException exception) {
             throw new IllegalArgumentException("图片保存失败");
         }
-        return ApiResponse.success(Map.of("url", "/api/shop/upload/" + filename, "filename", filename));
+        return ApiResponse.success(new ShopUploadVo("/api/shop/upload/" + filename, filename));
     }
 
     private void validate(MultipartFile file) {

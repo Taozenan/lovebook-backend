@@ -6,13 +6,12 @@ import com.tzn.common.mapper.*;
 import com.tzn.shop.enums.ShopItemType;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopService;
+import com.tzn.shop.vo.*;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class ShopServiceImpl implements ShopService {
@@ -45,10 +44,9 @@ public class ShopServiceImpl implements ShopService {
   }
 
   @Override
-  public Map<String, Object> home(String authorization) {
+  public ShopHomeVo home(String authorization) {
     long pid = partnerId(authorization);
-    Map<String, Object> r = new LinkedHashMap<>();
-    List<Map<String, Object>> banners = new ArrayList<>();
+    List<ShopBannerVo> banners = new ArrayList<>();
     bannerMapper
             .selectList(
                     new LambdaQueryWrapper<ShopBanner>()
@@ -58,15 +56,10 @@ public class ShopServiceImpl implements ShopService {
                             .orderByDesc(ShopBanner::getId))
             .forEach(
                     b -> {
-                      Map<String, Object> m = new LinkedHashMap<>();
-                      m.put("id", b.getId());
-                      m.put("title", b.getTitle());
-                      m.put("imageUrl", b.getImageUrl());
-                      m.put("linkItemId", b.getLinkItemId());
-                      banners.add(m);
+                      banners.add(
+                              new ShopBannerVo(b.getId(), b.getTitle(), b.getImageUrl(), b.getLinkItemId()));
                     });
-    r.put("banners", banners);
-    List<Map<String, Object>> cats = new ArrayList<>();
+    List<ShopCategoryVo> cats = new ArrayList<>();
     categoryMapper
             .selectList(
                     new LambdaQueryWrapper<ShopCategory>()
@@ -76,22 +69,19 @@ public class ShopServiceImpl implements ShopService {
                             .orderByAsc(ShopCategory::getId))
             .forEach(
                     c -> {
-                      Map<String, Object> m = new LinkedHashMap<>();
-                      m.put("id", c.getId());
-                      m.put("categoryType", c.getCategoryType());
-                      m.put("name", c.getName());
-                      m.put("iconUrl", c.getIconUrl());
-                      cats.add(m);
+                      cats.add(
+                              new ShopCategoryVo(c.getId(), c.getCategoryType(), c.getName(), c.getIconUrl()));
                     });
-    r.put("categories", cats);
-    r.put("partner", partnerProfile(pid));
-    r.put("recommendedFoods", queryItems(ShopItemType.FOOD, pid, true, 6));
-    r.put("hotServices", queryItems(ShopItemType.SERVICE, pid, true, 6));
-    return r;
+    return new ShopHomeVo(
+            banners,
+            cats,
+            partnerProfile(pid),
+            queryItems(ShopItemType.FOOD, pid, true, 6),
+            queryItems(ShopItemType.SERVICE, pid, true, 6));
   }
 
   @Override
-  public Map<String, Object> list(
+  public ShopItemVoList list(
           String authorization,
           Integer itemType,
           String keyword,
@@ -109,15 +99,15 @@ public class ShopServiceImpl implements ShopService {
     if (keyword != null && !keyword.isBlank()) w.like(ShopItem::getTitle, keyword.trim());
     if (categoryId != null) w.eq(ShopItem::getCategoryId, categoryId);
     if (Boolean.TRUE.equals(recommended)) w.eq(ShopItem::getIsRecommended, 1);
-    List<Map<String, Object>> items = new ArrayList<>();
+    List<ShopItemVo> items = new ArrayList<>();
     itemMapper
             .selectList(w)
             .forEach(i -> items.add(itemMap(i, userMapper.selectById(i.getSellerUserId()))));
-    return Map.of("items", items);
+    return new ShopItemVoList(items);
   }
 
   @Override
-  public Map<String, Object> detail(long itemId) {
+  public ShopItemVoDetail detail(long itemId) {
     ShopItem i =
             itemMapper.selectOne(
                     new LambdaQueryWrapper<ShopItem>()
@@ -125,9 +115,7 @@ public class ShopServiceImpl implements ShopService {
                             .eq(ShopItem::getStatus, 1)
                             .eq(ShopItem::getDelFlag, 0));
     if (i == null) throw new IllegalArgumentException("商品不存在或已下架");
-    Map<String, Object> r = new LinkedHashMap<>();
-    r.put("item", itemMap(i, userMapper.selectById(i.getSellerUserId())));
-    List<Map<String, Object>> images = new ArrayList<>();
+    List<ShopItemVoImage> images = new ArrayList<>();
     imageMapper
             .selectList(
                     new LambdaQueryWrapper<ShopItemImage>()
@@ -137,14 +125,9 @@ public class ShopServiceImpl implements ShopService {
                             .orderByAsc(ShopItemImage::getId))
             .forEach(
                     x -> {
-                      Map<String, Object> m = new LinkedHashMap<>();
-                      m.put("id", x.getId());
-                      m.put("imageUrl", x.getImageUrl());
-                      m.put("sortNo", x.getSortNo());
-                      images.add(m);
+                      images.add(new ShopItemVoImage(x.getId(), x.getImageUrl(), x.getSortNo()));
                     });
-    r.put("images", images);
-    List<Map<String, Object>> reviews = new ArrayList<>();
+    List<ShopItemReviewVo> reviews = new ArrayList<>();
     List<ShopItemReview> rs =
             reviewMapper.selectList(
                     new LambdaQueryWrapper<ShopItemReview>()
@@ -154,25 +137,24 @@ public class ShopServiceImpl implements ShopService {
                             .orderByDesc(ShopItemReview::getId));
     for (ShopItemReview x : rs) {
       SysUser u = userMapper.selectById(x.getReviewerUserId());
-      Map<String, Object> m = new LinkedHashMap<>();
-      m.put("id", x.getId());
-      m.put("rating", x.getRating());
-      m.put("content", x.getContent());
-      m.put("createTime", x.getCreateTime());
-      m.put("reviewerName", u == null ? "" : u.getNickname());
-      m.put("reviewerAvatarUrl", u == null ? null : u.getAvatarUrl());
-      reviews.add(m);
+      reviews.add(
+              new ShopItemReviewVo(
+                      x.getId(),
+                      x.getRating(),
+                      x.getContent(),
+                      x.getCreateTime(),
+                      u == null ? "" : u.getNickname(),
+                      u == null ? null : u.getAvatarUrl()));
     }
-    r.put("reviews", reviews);
     double avg = rs.stream().mapToInt(ShopItemReview::getRating).average().orElse(0);
-    r.put(
-            "reviewSummary",
-            Map.of("averageRating", BigDecimal.valueOf(avg), "reviewCount", rs.size()));
-    return r;
+    return new ShopItemVoDetail(
+            itemMap(i, userMapper.selectById(i.getSellerUserId())),
+            images,
+            reviews,
+            new ShopReviewSummaryVo(BigDecimal.valueOf(avg), rs.size()));
   }
 
-  private List<Map<String, Object>> queryItems(
-          ShopItemType type, long seller, boolean rec, int limit) {
+  private List<ShopItemVo> queryItems(ShopItemType type, long seller, boolean rec, int limit) {
     if (seller < 0) return List.of();
     LambdaQueryWrapper<ShopItem> w =
             new LambdaQueryWrapper<ShopItem>()
@@ -183,22 +165,18 @@ public class ShopServiceImpl implements ShopService {
                     .orderByDesc(ShopItem::getSortNo)
                     .orderByDesc(ShopItem::getId);
     if (rec) w.eq(ShopItem::getIsRecommended, 1);
-    List<Map<String, Object>> r = new ArrayList<>();
+    List<ShopItemVo> r = new ArrayList<>();
     itemMapper.selectList(w).stream()
             .limit(limit)
             .forEach(i -> r.add(itemMap(i, userMapper.selectById(i.getSellerUserId()))));
     return r;
   }
 
-  private Map<String, Object> partnerProfile(long id) {
-    if (id < 0) return Map.of("bound", false, "nickname", "");
+  private ShopPartnerVo partnerProfile(long id) {
+    if (id < 0) return new ShopPartnerVo(false, "", null);
     SysUser u = userMapper.selectById(id);
-    if (u == null) return Map.of("bound", false, "nickname", "");
-    Map<String, Object> m = new LinkedHashMap<>();
-    m.put("bound", true);
-    m.put("nickname", u.getNickname());
-    m.put("phone", u.getUsername());
-    return m;
+    if (u == null) return new ShopPartnerVo(false, "", null);
+    return new ShopPartnerVo(true, u.getNickname(), u.getUsername());
   }
 
   private long partnerId(String authorization) {
@@ -217,20 +195,19 @@ public class ShopServiceImpl implements ShopService {
     return uid == b.getRequesterUserId() ? b.getTargetUserId() : b.getRequesterUserId();
   }
 
-  private Map<String, Object> itemMap(ShopItem i, SysUser u) {
-    Map<String, Object> m = new LinkedHashMap<>();
-    m.put("id", i.getId());
-    m.put("itemType", i.getItemType());
-    m.put("title", i.getTitle());
-    m.put("subtitle", i.getSubtitle());
-    m.put("description", i.getDescription());
-    m.put("price", i.getPrice());
-    m.put("stock", i.getStock());
-    m.put("coverUrl", i.getCoverUrl());
-    m.put("serviceDurationMin", i.getServiceDurationMin());
-    m.put("sellerId", i.getSellerUserId());
-    m.put("sellerPhone", u == null ? null : u.getUsername());
-    m.put("sellerName", u == null ? null : u.getNickname());
-    return m;
+  private ShopItemVo itemMap(ShopItem i, SysUser u) {
+    return new ShopItemVo(
+            i.getId(),
+            i.getItemType(),
+            i.getTitle(),
+            i.getSubtitle(),
+            i.getDescription(),
+            i.getPrice(),
+            i.getStock(),
+            i.getCoverUrl(),
+            i.getServiceDurationMin(),
+            i.getSellerUserId(),
+            u == null ? null : u.getUsername(),
+            u == null ? null : u.getNickname());
   }
 }

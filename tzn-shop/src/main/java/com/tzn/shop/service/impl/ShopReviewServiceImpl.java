@@ -11,12 +11,11 @@ import com.tzn.shop.dto.ShopReviewCreateRequest;
 import com.tzn.shop.enums.ShopOrderStatus;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopReviewService;
+import com.tzn.shop.vo.ShopReviewCreatedVo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Service
 public class ShopReviewServiceImpl implements ShopReviewService {
@@ -35,7 +34,7 @@ public class ShopReviewServiceImpl implements ShopReviewService {
 
     @Override
     @Transactional
-    public Map<String, Object> create(
+    public ShopReviewCreatedVo create(
             String authorization, long orderId, ShopReviewCreateRequest request) {
         long reviewer = currentUserService.requireUserId(authorization);
         validate(request);
@@ -77,12 +76,8 @@ public class ShopReviewServiceImpl implements ShopReviewService {
         order.setUpdateUser(reviewer);
         order.setUpdateTime(LocalDateTime.now());
         orderMapper.updateById(order);
-        Map<String, Object> r = new LinkedHashMap<>();
-        r.put("id", review.getId());
-        r.put("orderId", orderId);
-        r.put("rating", review.getRating());
-        r.put("content", review.getContent());
-        return r;
+        return new ShopReviewCreatedVo(
+                review.getId(), orderId, review.getRating(), review.getContent());
     }
 
     private void validate(ShopReviewCreateRequest r) {

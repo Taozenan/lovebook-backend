@@ -3,9 +3,8 @@ package com.tzn.shop.controller;
 import com.tzn.common.api.ApiResponse;
 import com.tzn.shop.dto.ShopOrderQueryRequest;
 import com.tzn.shop.service.ShopOrderService;
+import com.tzn.shop.vo.ShopOrderDetailVo;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/shop/manage/orders")
@@ -17,7 +16,7 @@ public class ShopOrderManagementController {
     }
 
     @PostMapping("/query")
-    public ApiResponse<Map<String, Object>> query(
+    public ApiResponse<ShopOrderVoPage> query(
             @RequestHeader("Authorization") String authorization,
             @RequestBody(required = false) ShopOrderQueryRequest request) {
         ShopOrderQueryRequest condition =
@@ -28,7 +27,7 @@ public class ShopOrderManagementController {
     }
 
     @GetMapping("/get/{id}")
-    public ApiResponse<Map<String, Object>> get(
+    public ApiResponse<ShopOrderDetailVo> get(
             @RequestHeader("Authorization") String authorization, @PathVariable("id") long id) {
         return ApiResponse.success(shopOrderService.detail(authorization, id));
     }

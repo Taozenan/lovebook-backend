@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tzn.auth.dto.AvatarUpdateRequest;
 import com.tzn.auth.dto.LoginRequest;
 import com.tzn.auth.service.AuthService;
+import com.tzn.auth.vo.LoginVo;
 import com.tzn.common.entity.SysRole;
 import com.tzn.common.entity.SysUser;
 import com.tzn.common.entity.SysUserRole;
@@ -24,9 +25,7 @@ import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -51,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public Map<String, Object> login(LoginRequest request) {
+    public LoginVo login(LoginRequest request) {
         SysUser user =
                 userMapper.selectOne(
                         new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, request.username()));
@@ -72,14 +71,13 @@ public class AuthServiceImpl implements AuthService {
                 roleIds.isEmpty()
                         ? List.of()
                         : roleMapper.selectBatchIds(roleIds).stream().map(SysRole::getRoleCode).toList();
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("token", createToken(user.getUsername(), roles));
-        result.put("username", user.getUsername());
-        result.put("nickname", user.getNickname());
-        result.put("avatarUrl", user.getAvatarUrl());
-        result.put("roles", roles);
-        result.put("expiresIn", expiresSeconds);
-        return result;
+        return new LoginVo(
+                createToken(user.getUsername(), roles),
+                user.getUsername(),
+                user.getNickname(),
+                user.getAvatarUrl(),
+                roles,
+                expiresSeconds);
     }
 
     @Override

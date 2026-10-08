@@ -12,6 +12,9 @@ import com.tzn.shop.enums.ShopItemStatus;
 import com.tzn.shop.enums.ShopItemType;
 import com.tzn.shop.service.CurrentUserService;
 import com.tzn.shop.service.ShopManagementService;
+import com.tzn.shop.vo.ShopIdVo;
+import com.tzn.shop.vo.ShopManagementItemVo;
+import com.tzn.shop.vo.ShopManagementOverviewVo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class ShopManagementServiceImpl implements ShopManagementService {
@@ -42,7 +43,7 @@ public class ShopManagementServiceImpl implements ShopManagementService {
     }
 
     @Override
-    public Map<String, Object> overview(String authorization, Integer itemType, Integer status) {
+    public ShopManagementOverviewVo overview(String authorization, Integer itemType, Integer status) {
         long uid = currentUserService.requireUserId(authorization);
         LambdaQueryWrapper<ShopItem> w =
                 new LambdaQueryWrapper<ShopItem>()
@@ -58,18 +59,14 @@ public class ShopManagementServiceImpl implements ShopManagementService {
             ShopItemStatus.fromCode(status);
             w.eq(ShopItem::getStatus, status);
         }
-        List<Map<String, Object>> items = new ArrayList<>();
+        List<ShopManagementItemVo> items = new ArrayList<>();
         itemMapper.selectList(w).forEach(i -> items.add(itemMap(i)));
-        Map<String, Object> r = new LinkedHashMap<>();
-        r.put("items", items);
-        r.put("publishedCount", count(uid, ShopItemStatus.ON_SHELF.getCode()));
-        r.put(
-                "pendingOrderCount",
+        long pendingOrderCount =
                 orderMapper.selectCount(
                         new LambdaQueryWrapper<ShopOrder>()
                                 .eq(ShopOrder::getSellerUserId, uid)
                                 .in(ShopOrder::getStatus, List.of(1, 2))
-                                .eq(ShopOrder::getDelFlag, 0)));
+                                .eq(ShopOrder::getDelFlag, 0));
         BigDecimal income =
                 orderMapper
                         .selectList(
@@ -82,13 +79,13 @@ public class ShopManagementServiceImpl implements ShopManagementService {
                         .map(ShopOrder::getTotalAmount)
                         .filter(java.util.Objects::nonNull)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-        r.put("todayIncome", income);
-        return r;
+        return new ShopManagementOverviewVo(
+                items, count(uid, ShopItemStatus.ON_SHELF.getCode()), pendingOrderCount, income);
     }
 
     @Override
     @Transactional
-    public Map<String, Object> create(String authorization, ShopItemRequest request) {
+    public ShopIdVo create(String authorization, ShopItemRequest request) {
         long uid = currentUserService.requireUserId(authorization);
         validate(request);
         int st = request.status() == null ? 0 : request.status();
@@ -97,12 +94,12 @@ public class ShopManagementServiceImpl implements ShopManagementService {
         fill(i, request, uid, st);
         itemMapper.insert(i);
         saveImages(i.getId(), uid, request.imageUrls());
-        return Map.of("id", i.getId());
+        return new ShopIdVo(i.getId());
     }
 
     @Override
     @Transactional
-    public Map<String, Object> update(String authorization, long itemId, ShopItemRequest request) {
+    public ShopIdVo update(String authorization, long itemId, ShopItemRequest request) {
         long uid = currentUserService.requireUserId(authorization);
         validate(request);
         ShopItem i =
@@ -117,7 +114,7 @@ public class ShopManagementServiceImpl implements ShopManagementService {
         fill(i, request, uid, st);
         itemMapper.updateById(i);
         saveImages(itemId, uid, request.imageUrls());
-        return Map.of("id", itemId);
+        return new ShopIdVo(itemId);
     }
 
     @Override
@@ -246,24 +243,23 @@ public class ShopManagementServiceImpl implements ShopManagementService {
         if (r.price().signum() < 0 || r.stock() < 0) throw new IllegalArgumentException("价格和库存不能为负数");
     }
 
-    private Map<String, Object> itemMap(ShopItem i) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", i.getId());
-        m.put("categoryId", i.getCategoryId());
-        m.put("itemType", i.getItemType());
-        m.put("title", i.getTitle());
-        m.put("subtitle", i.getSubtitle());
-        m.put("description", i.getDescription());
-        m.put("price", i.getPrice());
-        m.put("stock", i.getStock());
-        m.put("coverUrl", i.getCoverUrl());
-        m.put("serviceDurationMin", i.getServiceDurationMin());
-        m.put("serviceRule", i.getServiceRule());
-        m.put("isRecommended", i.getIsRecommended());
-        m.put("status", i.getStatus());
-        m.put("publishTime", i.getPublishTime());
-        m.put("offShelfTime", i.getOffShelfTime());
-        m.put("offShelfReason", i.getOffShelfReason());
-        return m;
+    private ShopManagementItemVo itemMap(ShopItem i) {
+        return new ShopManagementItemVo(
+                i.getId(),
+                i.getCategoryId(),
+                i.getItemType(),
+                i.getTitle(),
+                i.getSubtitle(),
+                i.getDescription(),
+                i.getPrice(),
+                i.getStock(),
+                i.getCoverUrl(),
+                i.getServiceDurationMin(),
+                i.getServiceRule(),
+                i.getIsRecommended(),
+                i.getStatus(),
+                i.getPublishTime(),
+                i.getOffShelfTime(),
+                i.getOffShelfReason());
     }
 }

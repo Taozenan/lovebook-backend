@@ -1,8 +1,8 @@
 package com.tzn.shop.service;
 
 import com.tzn.shop.dto.ShopReviewCreateRequest;
-import java.util.Map;
+import com.tzn.shop.vo.ShopReviewCreatedVo;
 
 public interface ShopReviewService {
-    Map<String, Object> create(String authorization, long orderId, ShopReviewCreateRequest request);
+    ShopReviewCreatedVo create(String authorization, long orderId, ShopReviewCreateRequest request);
 }

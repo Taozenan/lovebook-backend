@@ -6,12 +6,14 @@ import com.tzn.auth.dto.LoginRequest;
 import com.tzn.auth.dto.RegisterRequest;
 import com.tzn.auth.service.AuthService;
 import com.tzn.auth.service.BindingService;
+import com.tzn.auth.vo.BindingInvitationVo;
+import com.tzn.auth.vo.BindingStatusVo;
+import com.tzn.auth.vo.LoginVo;
 import com.tzn.common.api.ApiResponse;
+import com.tzn.common.api.ServiceHealthVo;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,12 +28,12 @@ public class AuthHealthController {
   }
 
   @GetMapping("/health")
-  public ApiResponse<Map<String, String>> health() {
-    return ApiResponse.success(Map.of("service", "tzn-auth", "status", "UP"));
+  public ApiResponse<ServiceHealthVo> health() {
+    return ApiResponse.success(new ServiceHealthVo("tzn-auth", "UP"));
   }
 
   @PostMapping("/login")
-  public ApiResponse<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
+  public ApiResponse<LoginVo> login(@Valid @RequestBody LoginRequest request) {
     return ApiResponse.success(authService.login(request));
   }
 
@@ -50,20 +52,20 @@ public class AuthHealthController {
   }
 
   @PostMapping("/bindings/invitations")
-  public ApiResponse<Map<String, Object>> sendBindingInvite(
+  public ApiResponse<BindingInvitationVo> sendBindingInvite(
           @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
           @Valid @RequestBody BindingInviteRequest request) {
     return ApiResponse.success(bindingService.sendInvite(authorization, request));
   }
 
   @GetMapping("/bindings/status")
-  public ApiResponse<Map<String, Object>> bindingStatus(
+  public ApiResponse<BindingStatusVo> bindingStatus(
           @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
     return ApiResponse.success(bindingService.status(authorization));
   }
 
   @PutMapping("/bindings/invitations/{id}/accept")
-  public ApiResponse<Map<String, Object>> acceptBindingInvite(
+  public ApiResponse<BindingStatusVo> acceptBindingInvite(
           @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable("id") long id) {
     return ApiResponse.success(bindingService.accept(authorization, id));
   }
