@@ -1,1 +1,99 @@
-package com.tzn.common.entity; import com.baomidou.mybatisplus.annotation.*; import java.math.BigDecimal; import java.time.LocalDateTime; @TableName("shop_user_account") public class ShopUserAccount { @TableId(type=IdType.AUTO) private Long id; @TableField("user_id") private Long userId; private BigDecimal balance; @TableField("frozen_amount") private BigDecimal frozenAmount; @TableField("del_flag") private Integer delFlag; @TableField("create_user") private Long createUser; @TableField("update_user") private Long updateUser; @TableField("create_time") private LocalDateTime createTime; @TableField("update_time") private LocalDateTime updateTime; public Long getId(){return id;}public void setId(Long v){id=v;}public Long getUserId(){return userId;}public void setUserId(Long v){userId=v;}public BigDecimal getBalance(){return balance;}public void setBalance(BigDecimal v){balance=v;}public BigDecimal getFrozenAmount(){return frozenAmount;}public void setFrozenAmount(BigDecimal v){frozenAmount=v;}public Integer getDelFlag(){return delFlag;}public void setDelFlag(Integer v){delFlag=v;}public Long getCreateUser(){return createUser;}public void setCreateUser(Long v){createUser=v;}public Long getUpdateUser(){return updateUser;}public void setUpdateUser(Long v){updateUser=v;}public LocalDateTime getCreateTime(){return createTime;}public void setCreateTime(LocalDateTime v){createTime=v;}public LocalDateTime getUpdateTime(){return updateTime;}public void setUpdateTime(LocalDateTime v){updateTime=v;}}
+package com.tzn.common.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@TableName("shop_user_account")
+public class ShopUserAccount {
+    @TableId(type = IdType.AUTO)
+    private Long id;
+    @TableField("user_id")
+    private Long userId;
+    private BigDecimal balance;
+    @TableField("frozen_amount")
+    private BigDecimal frozenAmount;
+    @TableField("del_flag")
+    private Integer delFlag;
+    @TableField("create_user")
+    private Long createUser;
+    @TableField("update_user")
+    private Long updateUser;
+    @TableField("create_time")
+    private LocalDateTime createTime;
+    @TableField("update_time")
+    private LocalDateTime updateTime;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long v) {
+        id = v;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long v) {
+        userId = v;
+    }
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public void setBalance(BigDecimal v) {
+        balance = v;
+    }
+
+    public BigDecimal getFrozenAmount() {
+        return frozenAmount;
+    }
+
+    public void setFrozenAmount(BigDecimal v) {
+        frozenAmount = v;
+    }
+
+    public Integer getDelFlag() {
+        return delFlag;
+    }
+
+    public void setDelFlag(Integer v) {
+        delFlag = v;
+    }
+
+    public Long getCreateUser() {
+        return createUser;
+    }
+
+    public void setCreateUser(Long v) {
+        createUser = v;
+    }
+
+    public Long getUpdateUser() {
+        return updateUser;
+    }
+
+    public void setUpdateUser(Long v) {
+        updateUser = v;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime v) {
+        createTime = v;
+    }
+
+    public LocalDateTime getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(LocalDateTime v) {
+        updateTime = v;
+    }
+}

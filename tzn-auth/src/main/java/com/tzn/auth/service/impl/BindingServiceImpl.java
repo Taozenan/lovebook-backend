@@ -8,11 +8,13 @@ import com.tzn.common.entity.CoupleBinding;
 import com.tzn.common.entity.SysUser;
 import com.tzn.common.mapper.CoupleBindingMapper;
 import com.tzn.common.mapper.SysUserMapper;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -124,7 +126,15 @@ public class BindingServiceImpl implements BindingService {
         List<Map<String, Object>> result = new ArrayList<>();
         bindingMapper.selectList(new LambdaQueryWrapper<CoupleBinding>().eq(CoupleBinding::getRequesterUserId, userId)
                         .eq(CoupleBinding::getStatus, "PENDING").orderByDesc(CoupleBinding::getId))
-                .forEach(binding -> { SysUser user = userMapper.selectById(binding.getTargetUserId()); Map<String, Object> row = new LinkedHashMap<>(); row.put("id", binding.getId()); row.put("targetPhone", user.getUsername()); row.put("targetName", user.getNickname()); row.put("createTime", binding.getCreateTime()); result.add(row); });
+                .forEach(binding -> {
+                    SysUser user = userMapper.selectById(binding.getTargetUserId());
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("id", binding.getId());
+                    row.put("targetPhone", user.getUsername());
+                    row.put("targetName", user.getNickname());
+                    row.put("createTime", binding.getCreateTime());
+                    result.add(row);
+                });
         return result;
     }
 
@@ -132,15 +142,27 @@ public class BindingServiceImpl implements BindingService {
         List<Map<String, Object>> result = new ArrayList<>();
         bindingMapper.selectList(new LambdaQueryWrapper<CoupleBinding>().eq(CoupleBinding::getTargetUserId, userId)
                         .eq(CoupleBinding::getStatus, "PENDING").orderByDesc(CoupleBinding::getId))
-                .forEach(binding -> { SysUser user = userMapper.selectById(binding.getRequesterUserId()); Map<String, Object> row = new LinkedHashMap<>(); row.put("id", binding.getId()); row.put("requesterPhone", user.getUsername()); row.put("requesterName", user.getNickname()); row.put("createTime", binding.getCreateTime()); result.add(row); });
+                .forEach(binding -> {
+                    SysUser user = userMapper.selectById(binding.getRequesterUserId());
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("id", binding.getId());
+                    row.put("requesterPhone", user.getUsername());
+                    row.put("requesterName", user.getNickname());
+                    row.put("createTime", binding.getCreateTime());
+                    result.add(row);
+                });
         return result;
     }
 
-    private SysUser currentUser(String authorization) { return userByAccount(authService.currentUsername(authorization)); }
+    private SysUser currentUser(String authorization) {
+        return userByAccount(authService.currentUsername(authorization));
+    }
 
     private SysUser userByAccount(String account) {
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, account).eq(SysUser::getEnabled, 1));
-        if (user == null) { throw new IllegalArgumentException("该手机号尚未注册"); }
+        if (user == null) {
+            throw new IllegalArgumentException("该手机号尚未注册");
+        }
         return user;
     }
 

@@ -8,7 +8,9 @@ import com.tzn.auth.dto.RegisterRequest;
 import com.tzn.auth.service.AuthService;
 import com.tzn.auth.service.BindingService;
 import jakarta.validation.Valid;
+
 import java.util.Map;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,14 +52,14 @@ public class AuthHealthController {
 
     @PutMapping("/profile/avatar")
     public ApiResponse<Void> updateAvatar(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-                                                   @Valid @RequestBody AvatarUpdateRequest request) {
+                                          @Valid @RequestBody AvatarUpdateRequest request) {
         authService.updateAvatar(authorization, request);
         return ApiResponse.success(null);
     }
 
     @PostMapping("/bindings/invitations")
     public ApiResponse<Map<String, Object>> sendBindingInvite(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-                                                               @Valid @RequestBody BindingInviteRequest request) {
+                                                              @Valid @RequestBody BindingInviteRequest request) {
         return ApiResponse.success(bindingService.sendInvite(authorization, request));
     }
 
@@ -68,13 +70,13 @@ public class AuthHealthController {
 
     @PutMapping("/bindings/invitations/{id}/accept")
     public ApiResponse<Map<String, Object>> acceptBindingInvite(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-                                                                 @PathVariable("id") long id) {
+                                                                @PathVariable("id") long id) {
         return ApiResponse.success(bindingService.accept(authorization, id));
     }
 
     @PutMapping("/bindings/invitations/{id}/reject")
     public ApiResponse<Void> rejectBindingInvite(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-                                                  @PathVariable("id") long id) {
+                                                 @PathVariable("id") long id) {
         bindingService.reject(authorization, id);
         return ApiResponse.success(null);
     }

@@ -1,6 +1,7 @@
 package com.tzn.auth.service;
 
 import com.tzn.auth.dto.BindingInviteRequest;
+
 import java.util.Map;
 
 public interface BindingService {

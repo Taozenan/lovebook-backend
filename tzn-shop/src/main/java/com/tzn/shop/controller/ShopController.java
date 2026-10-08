@@ -2,7 +2,9 @@ package com.tzn.shop.controller;
 
 import com.tzn.common.api.ApiResponse;
 import com.tzn.shop.service.ShopService;
+
 import java.util.Map;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -27,10 +29,10 @@ public class ShopController {
 
     @GetMapping("/items")
     public ApiResponse<Map<String, Object>> list(@RequestHeader("Authorization") String authorization,
-                                                  @RequestParam(name = "type", required = false) Integer type,
-                                                  @RequestParam(name = "keyword", required = false) String keyword,
-                                                  @RequestParam(name = "categoryId", required = false) Long categoryId,
-                                                  @RequestParam(name = "recommended", required = false) Boolean recommended) {
+                                                 @RequestParam(name = "type", required = false) Integer type,
+                                                 @RequestParam(name = "keyword", required = false) String keyword,
+                                                 @RequestParam(name = "categoryId", required = false) Long categoryId,
+                                                 @RequestParam(name = "recommended", required = false) Boolean recommended) {
         return ApiResponse.success(shopService.list(authorization, type, keyword, categoryId, recommended));
     }
 
