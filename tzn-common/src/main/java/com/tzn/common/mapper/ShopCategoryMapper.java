@@ -5,5 +5,4 @@ import com.tzn.common.entity.ShopCategory;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface ShopCategoryMapper extends BaseMapper<ShopCategory> {
-}
+public interface ShopCategoryMapper extends BaseMapper<ShopCategory> {}

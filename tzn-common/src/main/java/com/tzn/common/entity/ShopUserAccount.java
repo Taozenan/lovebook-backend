@@ -6,101 +6,101 @@ import java.time.LocalDateTime;
 
 @TableName("shop_user_account")
 public class ShopUserAccount {
-    @TableId(type = IdType.AUTO)
-    private Long id;
+  @TableId(type = IdType.AUTO)
+  private Long id;
 
-    @TableField("user_id")
-    private Long userId;
+  @TableField("user_id")
+  private Long userId;
 
-    private BigDecimal balance;
+  private BigDecimal balance;
 
-    @TableField("frozen_amount")
-    private BigDecimal frozenAmount;
+  @TableField("frozen_amount")
+  private BigDecimal frozenAmount;
 
-    @TableField("del_flag")
-    private Integer delFlag;
+  @TableField("del_flag")
+  private Integer delFlag;
 
-    @TableField("create_user")
-    private Long createUser;
+  @TableField("create_user")
+  private Long createUser;
 
-    @TableField("update_user")
-    private Long updateUser;
+  @TableField("update_user")
+  private Long updateUser;
 
-    @TableField("create_time")
-    private LocalDateTime createTime;
+  @TableField("create_time")
+  private LocalDateTime createTime;
 
-    @TableField("update_time")
-    private LocalDateTime updateTime;
+  @TableField("update_time")
+  private LocalDateTime updateTime;
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public void setId(Long v) {
-        id = v;
-    }
+  public void setId(Long v) {
+    id = v;
+  }
 
-    public Long getUserId() {
-        return userId;
-    }
+  public Long getUserId() {
+    return userId;
+  }
 
-    public void setUserId(Long v) {
-        userId = v;
-    }
+  public void setUserId(Long v) {
+    userId = v;
+  }
 
-    public BigDecimal getBalance() {
-        return balance;
-    }
+  public BigDecimal getBalance() {
+    return balance;
+  }
 
-    public void setBalance(BigDecimal v) {
-        balance = v;
-    }
+  public void setBalance(BigDecimal v) {
+    balance = v;
+  }
 
-    public BigDecimal getFrozenAmount() {
-        return frozenAmount;
-    }
+  public BigDecimal getFrozenAmount() {
+    return frozenAmount;
+  }
 
-    public void setFrozenAmount(BigDecimal v) {
-        frozenAmount = v;
-    }
+  public void setFrozenAmount(BigDecimal v) {
+    frozenAmount = v;
+  }
 
-    public Integer getDelFlag() {
-        return delFlag;
-    }
+  public Integer getDelFlag() {
+    return delFlag;
+  }
 
-    public void setDelFlag(Integer v) {
-        delFlag = v;
-    }
+  public void setDelFlag(Integer v) {
+    delFlag = v;
+  }
 
-    public Long getCreateUser() {
-        return createUser;
-    }
+  public Long getCreateUser() {
+    return createUser;
+  }
 
-    public void setCreateUser(Long v) {
-        createUser = v;
-    }
+  public void setCreateUser(Long v) {
+    createUser = v;
+  }
 
-    public Long getUpdateUser() {
-        return updateUser;
-    }
+  public Long getUpdateUser() {
+    return updateUser;
+  }
 
-    public void setUpdateUser(Long v) {
-        updateUser = v;
-    }
+  public void setUpdateUser(Long v) {
+    updateUser = v;
+  }
 
-    public LocalDateTime getCreateTime() {
-        return createTime;
-    }
+  public LocalDateTime getCreateTime() {
+    return createTime;
+  }
 
-    public void setCreateTime(LocalDateTime v) {
-        createTime = v;
-    }
+  public void setCreateTime(LocalDateTime v) {
+    createTime = v;
+  }
 
-    public LocalDateTime getUpdateTime() {
-        return updateTime;
-    }
+  public LocalDateTime getUpdateTime() {
+    return updateTime;
+  }
 
-    public void setUpdateTime(LocalDateTime v) {
-        updateTime = v;
-    }
+  public void setUpdateTime(LocalDateTime v) {
+    updateTime = v;
+  }
 }

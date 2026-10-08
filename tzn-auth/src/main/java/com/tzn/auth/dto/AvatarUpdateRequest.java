@@ -5,9 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 头像更新请求。
- */
+/** 头像更新请求。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

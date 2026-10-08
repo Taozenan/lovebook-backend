@@ -1,15 +1,12 @@
 package com.tzn.shop.dto;
 
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-/**
- * 商品新增或更新请求。
- */
+/** 商品新增或更新请求。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,14 +41,10 @@ public class ShopItemRequest {
   /** 服务规则。 */
   private String serviceRule;
 
-  /**
-   * 商品图片地址列表。
-   */
+  /** 商品图片地址列表。 */
   private List<String> imageUrls;
 
-  /**
-   * 商品状态。
-   */
+  /** 商品状态。 */
   private Integer status;
 
   public Long categoryId() {

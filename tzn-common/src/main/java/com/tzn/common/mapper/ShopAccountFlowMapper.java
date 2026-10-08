@@ -5,5 +5,4 @@ import com.tzn.common.entity.ShopAccountFlow;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface ShopAccountFlowMapper extends BaseMapper<ShopAccountFlow> {
-}
+public interface ShopAccountFlowMapper extends BaseMapper<ShopAccountFlow> {}

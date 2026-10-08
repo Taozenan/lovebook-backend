@@ -4,9 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 绑定邀请请求。
- */
+/** 绑定邀请请求。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

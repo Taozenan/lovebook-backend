@@ -8,132 +8,132 @@ import java.time.LocalDateTime;
 
 @TableName("shop_item_review")
 public class ShopItemReview {
-    @TableId(type = IdType.AUTO)
-    private Long id;
+  @TableId(type = IdType.AUTO)
+  private Long id;
 
-    @TableField("order_id")
-    private Long orderId;
+  @TableField("order_id")
+  private Long orderId;
 
-    @TableField("item_id")
-    private Long itemId;
+  @TableField("item_id")
+  private Long itemId;
 
-    @TableField("reviewer_user_id")
-    private Long reviewerUserId;
+  @TableField("reviewer_user_id")
+  private Long reviewerUserId;
 
-    @TableField("seller_user_id")
-    private Long sellerUserId;
+  @TableField("seller_user_id")
+  private Long sellerUserId;
 
-    private Integer rating;
-    private String content;
+  private Integer rating;
+  private String content;
 
-    @TableField("del_flag")
-    private Integer delFlag;
+  @TableField("del_flag")
+  private Integer delFlag;
 
-    @TableField("create_user")
-    private Long createUser;
+  @TableField("create_user")
+  private Long createUser;
 
-    @TableField("update_user")
-    private Long updateUser;
+  @TableField("update_user")
+  private Long updateUser;
 
-    @TableField("create_time")
-    private LocalDateTime createTime;
+  @TableField("create_time")
+  private LocalDateTime createTime;
 
-    @TableField("update_time")
-    private LocalDateTime updateTime;
+  @TableField("update_time")
+  private LocalDateTime updateTime;
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public void setId(Long v) {
-        id = v;
-    }
+  public void setId(Long v) {
+    id = v;
+  }
 
-    public Long getOrderId() {
-        return orderId;
-    }
+  public Long getOrderId() {
+    return orderId;
+  }
 
-    public void setOrderId(Long v) {
-        orderId = v;
-    }
+  public void setOrderId(Long v) {
+    orderId = v;
+  }
 
-    public Long getItemId() {
-        return itemId;
-    }
+  public Long getItemId() {
+    return itemId;
+  }
 
-    public void setItemId(Long v) {
-        itemId = v;
-    }
+  public void setItemId(Long v) {
+    itemId = v;
+  }
 
-    public Long getReviewerUserId() {
-        return reviewerUserId;
-    }
+  public Long getReviewerUserId() {
+    return reviewerUserId;
+  }
 
-    public void setReviewerUserId(Long v) {
-        reviewerUserId = v;
-    }
+  public void setReviewerUserId(Long v) {
+    reviewerUserId = v;
+  }
 
-    public Long getSellerUserId() {
-        return sellerUserId;
-    }
+  public Long getSellerUserId() {
+    return sellerUserId;
+  }
 
-    public void setSellerUserId(Long v) {
-        sellerUserId = v;
-    }
+  public void setSellerUserId(Long v) {
+    sellerUserId = v;
+  }
 
-    public Integer getRating() {
-        return rating;
-    }
+  public Integer getRating() {
+    return rating;
+  }
 
-    public void setRating(Integer v) {
-        rating = v;
-    }
+  public void setRating(Integer v) {
+    rating = v;
+  }
 
-    public String getContent() {
-        return content;
-    }
+  public String getContent() {
+    return content;
+  }
 
-    public void setContent(String v) {
-        content = v;
-    }
+  public void setContent(String v) {
+    content = v;
+  }
 
-    public Integer getDelFlag() {
-        return delFlag;
-    }
+  public Integer getDelFlag() {
+    return delFlag;
+  }
 
-    public void setDelFlag(Integer v) {
-        delFlag = v;
-    }
+  public void setDelFlag(Integer v) {
+    delFlag = v;
+  }
 
-    public Long getCreateUser() {
-        return createUser;
-    }
+  public Long getCreateUser() {
+    return createUser;
+  }
 
-    public void setCreateUser(Long v) {
-        createUser = v;
-    }
+  public void setCreateUser(Long v) {
+    createUser = v;
+  }
 
-    public Long getUpdateUser() {
-        return updateUser;
-    }
+  public Long getUpdateUser() {
+    return updateUser;
+  }
 
-    public void setUpdateUser(Long v) {
-        updateUser = v;
-    }
+  public void setUpdateUser(Long v) {
+    updateUser = v;
+  }
 
-    public LocalDateTime getCreateTime() {
-        return createTime;
-    }
+  public LocalDateTime getCreateTime() {
+    return createTime;
+  }
 
-    public void setCreateTime(LocalDateTime v) {
-        createTime = v;
-    }
+  public void setCreateTime(LocalDateTime v) {
+    createTime = v;
+  }
 
-    public LocalDateTime getUpdateTime() {
-        return updateTime;
-    }
+  public LocalDateTime getUpdateTime() {
+    return updateTime;
+  }
 
-    public void setUpdateTime(LocalDateTime v) {
-        updateTime = v;
-    }
+  public void setUpdateTime(LocalDateTime v) {
+    updateTime = v;
+  }
 }

@@ -17,9 +17,9 @@ public class ShopReviewController {
 
   @PostMapping("/{id}/review")
   public ApiResponse<ShopReviewCreatedVo> create(
-          @RequestHeader("Authorization") String authorization,
-          @PathVariable("id") long id,
-          @RequestBody ShopReviewCreateRequest request) {
+      @RequestHeader("Authorization") String authorization,
+      @PathVariable("id") long id,
+      @RequestBody ShopReviewCreateRequest request) {
     return ApiResponse.success(shopReviewService.create(authorization, id, request));
   }
 }

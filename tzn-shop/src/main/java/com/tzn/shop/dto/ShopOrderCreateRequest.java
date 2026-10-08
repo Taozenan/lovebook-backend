@@ -4,9 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 订单创建请求。
- */
+/** 订单创建请求。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

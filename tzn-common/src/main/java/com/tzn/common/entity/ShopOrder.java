@@ -9,243 +9,243 @@ import java.time.LocalDateTime;
 
 @TableName("shop_order")
 public class ShopOrder {
-    @TableId(type = IdType.AUTO)
-    private Long id;
+  @TableId(type = IdType.AUTO)
+  private Long id;
 
-    @TableField("order_no")
-    private String orderNo;
+  @TableField("order_no")
+  private String orderNo;
 
-    @TableField("buyer_user_id")
-    private Long buyerUserId;
+  @TableField("buyer_user_id")
+  private Long buyerUserId;
 
-    @TableField("seller_user_id")
-    private Long sellerUserId;
+  @TableField("seller_user_id")
+  private Long sellerUserId;
 
-    @TableField("total_amount")
-    private BigDecimal totalAmount;
+  @TableField("total_amount")
+  private BigDecimal totalAmount;
 
-    private Integer status;
+  private Integer status;
 
-    @TableField("is_reviewed")
-    private Integer isReviewed;
+  @TableField("is_reviewed")
+  private Integer isReviewed;
 
-    @TableField("payment_status")
-    private Integer paymentStatus;
+  @TableField("payment_status")
+  private Integer paymentStatus;
 
-    @TableField("payment_method")
-    private Integer paymentMethod;
+  @TableField("payment_method")
+  private Integer paymentMethod;
 
-    @TableField("paid_amount")
-    private BigDecimal paidAmount;
+  @TableField("paid_amount")
+  private BigDecimal paidAmount;
 
-    @TableField("paid_time")
-    private LocalDateTime paidTime;
+  @TableField("paid_time")
+  private LocalDateTime paidTime;
 
-    @TableField("seller_confirm_time")
-    private LocalDateTime sellerConfirmTime;
+  @TableField("seller_confirm_time")
+  private LocalDateTime sellerConfirmTime;
 
-    @TableField("buyer_confirm_time")
-    private LocalDateTime buyerConfirmTime;
+  @TableField("buyer_confirm_time")
+  private LocalDateTime buyerConfirmTime;
 
-    @TableField("completed_time")
-    private LocalDateTime completedTime;
+  @TableField("completed_time")
+  private LocalDateTime completedTime;
 
-    @TableField("appointment_time")
-    private LocalDateTime appointmentTime;
+  @TableField("appointment_time")
+  private LocalDateTime appointmentTime;
 
-    private String remark;
+  private String remark;
 
-    @TableField("del_flag")
-    private Integer delFlag;
+  @TableField("del_flag")
+  private Integer delFlag;
 
-    @TableField("create_user")
-    private Long createUser;
+  @TableField("create_user")
+  private Long createUser;
 
-    @TableField("update_user")
-    private Long updateUser;
+  @TableField("update_user")
+  private Long updateUser;
 
-    @TableField("create_time")
-    private LocalDateTime createTime;
+  @TableField("create_time")
+  private LocalDateTime createTime;
 
-    @TableField("update_time")
-    private LocalDateTime updateTime;
+  @TableField("update_time")
+  private LocalDateTime updateTime;
 
-    @TableField("version")
-    private Integer version;
+  @TableField("version")
+  private Integer version;
 
-    public Long getId() {
-        return id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public void setId(Long v) {
-        id = v;
-    }
+  public void setId(Long v) {
+    id = v;
+  }
 
-    public String getOrderNo() {
-        return orderNo;
-    }
+  public String getOrderNo() {
+    return orderNo;
+  }
 
-    public void setOrderNo(String v) {
-        orderNo = v;
-    }
+  public void setOrderNo(String v) {
+    orderNo = v;
+  }
 
-    public Long getBuyerUserId() {
-        return buyerUserId;
-    }
+  public Long getBuyerUserId() {
+    return buyerUserId;
+  }
 
-    public void setBuyerUserId(Long v) {
-        buyerUserId = v;
-    }
+  public void setBuyerUserId(Long v) {
+    buyerUserId = v;
+  }
 
-    public Long getSellerUserId() {
-        return sellerUserId;
-    }
+  public Long getSellerUserId() {
+    return sellerUserId;
+  }
 
-    public void setSellerUserId(Long v) {
-        sellerUserId = v;
-    }
+  public void setSellerUserId(Long v) {
+    sellerUserId = v;
+  }
 
-    public BigDecimal getTotalAmount() {
-        return totalAmount;
-    }
+  public BigDecimal getTotalAmount() {
+    return totalAmount;
+  }
 
-    public void setTotalAmount(BigDecimal v) {
-        totalAmount = v;
-    }
-
-    public Integer getStatus() {
-        return status;
-    }
-
-    public void setStatus(Integer v) {
-        status = v;
-    }
-
-    public Integer getIsReviewed() {
-        return isReviewed;
-    }
-
-    public void setIsReviewed(Integer v) {
-        isReviewed = v;
-    }
-
-    public Integer getPaymentStatus() {
-        return paymentStatus;
-    }
-
-    public void setPaymentStatus(Integer v) {
-        paymentStatus = v;
-    }
-
-    public Integer getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(Integer v) {
-        paymentMethod = v;
-    }
-
-    public BigDecimal getPaidAmount() {
-        return paidAmount;
-    }
-
-    public void setPaidAmount(BigDecimal v) {
-        paidAmount = v;
-    }
-
-    public LocalDateTime getPaidTime() {
-        return paidTime;
-    }
-
-    public void setPaidTime(LocalDateTime v) {
-        paidTime = v;
-    }
-
-    public LocalDateTime getSellerConfirmTime() {
-        return sellerConfirmTime;
-    }
-
-    public void setSellerConfirmTime(LocalDateTime v) {
-        sellerConfirmTime = v;
-    }
-
-    public LocalDateTime getBuyerConfirmTime() {
-        return buyerConfirmTime;
-    }
-
-    public void setBuyerConfirmTime(LocalDateTime v) {
-        buyerConfirmTime = v;
-    }
-
-    public LocalDateTime getCompletedTime() {
-        return completedTime;
-    }
-
-    public void setCompletedTime(LocalDateTime v) {
-        completedTime = v;
-    }
-
-    public LocalDateTime getAppointmentTime() {
-        return appointmentTime;
-    }
-
-    public void setAppointmentTime(LocalDateTime v) {
-        appointmentTime = v;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String v) {
-        remark = v;
-    }
-
-    public Integer getDelFlag() {
-        return delFlag;
-    }
-
-    public void setDelFlag(Integer v) {
-        delFlag = v;
-    }
-
-    public Long getCreateUser() {
-        return createUser;
-    }
-
-    public void setCreateUser(Long v) {
-        createUser = v;
-    }
-
-    public Long getUpdateUser() {
-        return updateUser;
-    }
-
-    public void setUpdateUser(Long v) {
-        updateUser = v;
-    }
-
-    public LocalDateTime getCreateTime() {
-        return createTime;
-    }
-
-    public void setCreateTime(LocalDateTime v) {
-        createTime = v;
-    }
-
-    public LocalDateTime getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(LocalDateTime v) {
-        updateTime = v;
-    }
-
-    public Integer getVersion() {
-        return version;
-    }
-
-    public void setVersion(Integer v) {
-        version = v;
-    }
+  public void setTotalAmount(BigDecimal v) {
+    totalAmount = v;
+  }
+
+  public Integer getStatus() {
+    return status;
+  }
+
+  public void setStatus(Integer v) {
+    status = v;
+  }
+
+  public Integer getIsReviewed() {
+    return isReviewed;
+  }
+
+  public void setIsReviewed(Integer v) {
+    isReviewed = v;
+  }
+
+  public Integer getPaymentStatus() {
+    return paymentStatus;
+  }
+
+  public void setPaymentStatus(Integer v) {
+    paymentStatus = v;
+  }
+
+  public Integer getPaymentMethod() {
+    return paymentMethod;
+  }
+
+  public void setPaymentMethod(Integer v) {
+    paymentMethod = v;
+  }
+
+  public BigDecimal getPaidAmount() {
+    return paidAmount;
+  }
+
+  public void setPaidAmount(BigDecimal v) {
+    paidAmount = v;
+  }
+
+  public LocalDateTime getPaidTime() {
+    return paidTime;
+  }
+
+  public void setPaidTime(LocalDateTime v) {
+    paidTime = v;
+  }
+
+  public LocalDateTime getSellerConfirmTime() {
+    return sellerConfirmTime;
+  }
+
+  public void setSellerConfirmTime(LocalDateTime v) {
+    sellerConfirmTime = v;
+  }
+
+  public LocalDateTime getBuyerConfirmTime() {
+    return buyerConfirmTime;
+  }
+
+  public void setBuyerConfirmTime(LocalDateTime v) {
+    buyerConfirmTime = v;
+  }
+
+  public LocalDateTime getCompletedTime() {
+    return completedTime;
+  }
+
+  public void setCompletedTime(LocalDateTime v) {
+    completedTime = v;
+  }
+
+  public LocalDateTime getAppointmentTime() {
+    return appointmentTime;
+  }
+
+  public void setAppointmentTime(LocalDateTime v) {
+    appointmentTime = v;
+  }
+
+  public String getRemark() {
+    return remark;
+  }
+
+  public void setRemark(String v) {
+    remark = v;
+  }
+
+  public Integer getDelFlag() {
+    return delFlag;
+  }
+
+  public void setDelFlag(Integer v) {
+    delFlag = v;
+  }
+
+  public Long getCreateUser() {
+    return createUser;
+  }
+
+  public void setCreateUser(Long v) {
+    createUser = v;
+  }
+
+  public Long getUpdateUser() {
+    return updateUser;
+  }
+
+  public void setUpdateUser(Long v) {
+    updateUser = v;
+  }
+
+  public LocalDateTime getCreateTime() {
+    return createTime;
+  }
+
+  public void setCreateTime(LocalDateTime v) {
+    createTime = v;
+  }
+
+  public LocalDateTime getUpdateTime() {
+    return updateTime;
+  }
+
+  public void setUpdateTime(LocalDateTime v) {
+    updateTime = v;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public void setVersion(Integer v) {
+    version = v;
+  }
 }

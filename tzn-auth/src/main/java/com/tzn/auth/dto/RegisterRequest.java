@@ -7,9 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 注册请求。
- */
+/** 注册请求。 */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,17 +18,13 @@ public class RegisterRequest {
   /** 手机号。 */
   private String phone;
 
-  /**
-   * 用户昵称。
-   */
+  /** 用户昵称。 */
   @NotBlank
   @Size(max = 32)
   /** 用户昵称。 */
   private String nickname;
 
-  /**
-   * 登录密码。
-   */
+  /** 登录密码。 */
   @NotBlank
   @Size(min = 6, max = 64)
   /** 登录密码。 */

@@ -45,34 +45,34 @@ public class AuthHealthController {
 
   @PutMapping("/profile/avatar")
   public ApiResponse<Void> updateAvatar(
-          @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-          @Valid @RequestBody AvatarUpdateRequest request) {
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+      @Valid @RequestBody AvatarUpdateRequest request) {
     authService.updateAvatar(authorization, request);
     return ApiResponse.success(null);
   }
 
   @PostMapping("/bindings/invitations")
   public ApiResponse<BindingInvitationVo> sendBindingInvite(
-          @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-          @Valid @RequestBody BindingInviteRequest request) {
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+      @Valid @RequestBody BindingInviteRequest request) {
     return ApiResponse.success(bindingService.sendInvite(authorization, request));
   }
 
   @GetMapping("/bindings/status")
   public ApiResponse<BindingStatusVo> bindingStatus(
-          @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
     return ApiResponse.success(bindingService.status(authorization));
   }
 
   @PutMapping("/bindings/invitations/{id}/accept")
   public ApiResponse<BindingStatusVo> acceptBindingInvite(
-          @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable("id") long id) {
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable("id") long id) {
     return ApiResponse.success(bindingService.accept(authorization, id));
   }
 
   @PutMapping("/bindings/invitations/{id}/reject")
   public ApiResponse<Void> rejectBindingInvite(
-          @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable("id") long id) {
+      @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable("id") long id) {
     bindingService.reject(authorization, id);
     return ApiResponse.success(null);
   }
